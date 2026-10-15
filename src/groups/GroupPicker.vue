@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { COPY } from '@/shared/copy';
-import {
-    findGroup,
-    loadGroupVocabulary,
-    parseGroupRef,
-    searchGroups,
-    SEARCH_LIMIT,
-} from './groups.api';
+import { loadGroupVocabulary, runSearch, SEARCH_LIMIT } from './groups.api';
 import type { Choice } from './groups.api';
 import type { GroupInfo } from '@/members/types';
 
@@ -15,7 +9,9 @@ import type { GroupInfo } from '@/members/types';
  * Find a group by name, by id, or by pasting its link; narrow by group type.
  * Lists only what ChurchTools returns to this viewer.
  */
+const props = defineProps<{ focusOnMount?: boolean }>();
 const emit = defineEmits<{ select: [group: GroupInfo] }>();
+const input = ref<HTMLInputElement | null>(null);
 
 const query = ref('');
 const typeId = ref<number | null>(null);
@@ -32,6 +28,9 @@ const result = ref<SearchState>({ phase: 'idle' });
 const ids = { query: useId(), type: useId(), results: useId() };
 
 onMounted(async () => {
+    // Back from a chosen group: the button that was pressed is gone, so focus
+    // goes where the next step starts rather than to the top of the page.
+    if (props.focusOnMount) input.value?.focus();
     const vocabulary = await loadGroupVocabulary();
     types.value = vocabulary.types;
     statuses.value = vocabulary.statuses;
@@ -51,42 +50,35 @@ watch([query, typeId], () => {
 async function run() {
     const text = query.value.trim();
     const mine = ++token;
-    if (!text && typeId.value === null) {
-        result.value = { phase: 'idle' };
-        return;
-    }
     result.value = { phase: 'searching' };
     try {
-        // An id or a pasted link finds that one group. A bare number nothing
-        // answers to is searched as a name after all ("2026"); a link to a
-        // group this viewer cannot see finds nothing.
-        const groupRef = parseGroupRef(text);
-        const direct = groupRef !== null ? await findGroup(groupRef) : null;
-        const isLink = groupRef !== null && !/^#?\d+$/.test(text);
-        const found = direct
-            ? { groups: [direct], total: 1 }
-            : isLink
-              ? { groups: [], total: 0 }
-              : await searchGroups(text, typeId.value);
-        if (mine === token) result.value = { phase: 'done', ...found };
+        const found = await runSearch(text, typeId.value);
+        if (mine !== token) return;
+        result.value = found ? { phase: 'done', ...found } : { phase: 'idle' };
     } catch (e) {
         console.error('[teilnehmerliste] group search failed:', e);
         if (mine === token) result.value = { phase: 'error' };
     }
 }
 
-const summary = computed(() => {
+/** One line that says where the search stands — the only part announced. */
+const status = computed(() => {
     const r = result.value;
-    if (r.phase !== 'done') return '';
+    switch (r.phase) {
+        case 'idle':
+            return COPY.searchHint;
+        case 'searching':
+            return COPY.searching;
+        case 'error':
+            return COPY.searchFailed;
+    }
     if (r.groups.length === 0) return COPY.searchNoHits;
-    return r.total > r.groups.length
-        ? COPY.searchMoreHits(r.groups.length, r.total)
-        : COPY.searchHits(r.total);
+    const count =
+        r.total > r.groups.length
+            ? COPY.searchMoreHits(r.groups.length, r.total)
+            : COPY.searchHits(r.total);
+    return r.total > SEARCH_LIMIT ? count + COPY.searchNarrow : count;
 });
-
-const showLimitNote = computed(
-    () => result.value.phase === 'done' && result.value.total > SEARCH_LIMIT,
-);
 </script>
 
 <template>
@@ -97,6 +89,7 @@ const showLimitNote = computed(
                 <label class="picker__label" :for="ids.query">{{ COPY.searchLabel }}</label>
                 <input
                     :id="ids.query"
+                    ref="input"
                     v-model="query"
                     class="picker__input"
                     type="search"
@@ -114,38 +107,28 @@ const showLimitNote = computed(
             </div>
         </div>
 
-        <div :id="ids.results" class="picker__results" aria-live="polite">
-            <p v-if="result.phase === 'idle'" class="picker__note">{{ COPY.searchHint }}</p>
-            <p v-else-if="result.phase === 'searching'" class="picker__note">
-                {{ COPY.searching }}
+        <div :id="ids.results" class="picker__results">
+            <p
+                class="picker__note"
+                :class="{ 'picker__note--error': result.phase === 'error' }"
+                role="status"
+            >
+                {{ status }}
             </p>
-            <p v-else-if="result.phase === 'error'" class="picker__note picker__note--error">
-                {{ COPY.searchFailed }}
-            </p>
-            <template v-else>
-                <p class="picker__note">
-                    {{ summary }}
-                    <template v-if="showLimitNote">{{ COPY.searchNarrow }}</template>
-                </p>
-                <ul v-if="result.groups.length" class="picker__list">
-                    <li v-for="g in result.groups" :key="g.id">
-                        <button type="button" class="picker__hit" @click="emit('select', g)">
-                            <span class="picker__hit-name">{{ g.name }}</span>
-                            <span class="picker__hit-meta">
-                                {{
-                                    [
-                                        typeName(g.groupTypeId),
-                                        statusName(g.groupStatusId),
-                                        `#${g.id}`,
-                                    ]
-                                        .filter(Boolean)
-                                        .join(' · ')
-                                }}
-                            </span>
-                        </button>
-                    </li>
-                </ul>
-            </template>
+            <ul v-if="result.phase === 'done' && result.groups.length" class="picker__list">
+                <li v-for="g in result.groups" :key="g.id">
+                    <button type="button" class="picker__hit" @click="emit('select', g)">
+                        <span class="picker__hit-name">{{ g.name }}</span>
+                        <span class="picker__hit-meta">
+                            {{
+                                [typeName(g.groupTypeId), statusName(g.groupStatusId), `#${g.id}`]
+                                    .filter(Boolean)
+                                    .join(' · ')
+                            }}
+                        </span>
+                    </button>
+                </li>
+            </ul>
         </div>
     </section>
 </template>

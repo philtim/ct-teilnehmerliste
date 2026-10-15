@@ -77,3 +77,42 @@ export async function findGroup(groupId: number): Promise<GroupInfo | null> {
         throw e;
     }
 }
+
+export type SearchResult = { groups: GroupInfo[]; total: number };
+
+/**
+ * What the picker shows for what was typed, or null for nothing to search.
+ *
+ * - A pasted link finds that one group, or nothing if this viewer cannot see
+ *   it — searching the link text as a name would only produce noise.
+ * - A bare number is both: the group with that id, listed first, and the
+ *   groups whose name contains it ("2026").
+ * - Anything else is a name search, narrowed by the type when one is chosen.
+ *   A type alone lists that type's groups.
+ */
+export async function runSearch(
+    text: string,
+    groupTypeId: number | null,
+    api: { findGroup: typeof findGroup; searchGroups: typeof searchGroups } = {
+        findGroup,
+        searchGroups,
+    },
+): Promise<SearchResult | null> {
+    const trimmed = text.trim();
+    if (!trimmed && groupTypeId === null) return null;
+
+    const groupRef = parseGroupRef(trimmed);
+    if (groupRef === null) return api.searchGroups(trimmed, groupTypeId);
+
+    if (!/^#?\d+$/.test(trimmed)) {
+        const direct = await api.findGroup(groupRef);
+        return direct ? { groups: [direct], total: 1 } : { groups: [], total: 0 };
+    }
+
+    const [direct, byName] = await Promise.all([
+        api.findGroup(groupRef),
+        api.searchGroups(trimmed.replace(/^#/, ''), groupTypeId),
+    ]);
+    if (!direct || byName.groups.some((g) => g.id === direct.id)) return byName;
+    return { groups: [direct, ...byName.groups], total: byName.total + 1 };
+}

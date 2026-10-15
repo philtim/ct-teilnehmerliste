@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { memberEdges, missingTypes, resolveRelationshipTypes } from './relationships';
+import { memberEdges, resolveRelationshipTypes } from './relationships';
 
 describe('resolveRelationshipTypes', () => {
     it('finds parent/child and couple by their built-in keys, whatever their ids', () => {
@@ -126,11 +126,5 @@ describe('memberEdges', () => {
                 members,
             ),
         ).toEqual([]);
-    });
-});
-
-describe('missingTypes', () => {
-    it('names the types the installation lacks', () => {
-        expect(missingTypes({ parentChild: 7, sibling: null, couple: 2 })).toEqual(['sibling']);
     });
 });

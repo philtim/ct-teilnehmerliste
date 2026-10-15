@@ -45,8 +45,9 @@ export const COPY = {
     chosenGroup: 'Gewählte Gruppe',
     changeGroup: 'Andere Gruppe wählen',
     openGroupInNewTab: (name: string) => `${name} in ChurchTools öffnen (neuer Tab)`,
-    openPersonInNewTab: (name: string) =>
-        `Profil von ${name || 'dieser Person'} öffnen (neuer Tab)`,
+    /** Starts with the visible id, so speech input can name the link (WCAG 2.5.3). */
+    openProfileById: (id: number, name: string) =>
+        `${id}: Profil von ${name || 'dieser Person'} öffnen (neuer Tab)`,
     loadingGroup: 'Mitglieder, Personendaten und Beziehungen werden geladen …',
     loadError: {
         notFound: 'Diese Gruppe gibt es nicht, oder du darfst sie nicht sehen.',
@@ -77,6 +78,12 @@ export const COPY = {
             'In ChurchTools gibt es keine Beziehungsart „Elternteil/Kind“. Geschwister ' +
             'werden deshalb nur über Adresse, Nachname oder eine Geschwister-Beziehung erkannt.',
     },
+    hintGroupFieldsUnreadable:
+        'Die Felder dieser Gruppe konnten nicht gelesen werden. Ihre Spalten fehlen ' +
+        'deshalb – bitte die Seite neu laden.',
+    hintPersonFieldsUnreadable:
+        'Die Personenfelder von ChurchTools konnten nicht gelesen werden. Weitere ' +
+        'Personenfelder stehen deshalb nicht zur Auswahl.',
     hintNotLoaded: (n: number) =>
         `Von ${people(n)} darfst du nur den Namen sehen. Sie stehen ohne Adresse und ` +
         'weitere Daten auf der Liste, jede als eigene Familie, wenn keine Beziehung sie verbindet.',
@@ -87,6 +94,7 @@ export const COPY = {
     // Status filter
     statusFilter: 'Status:',
     memberStatus: (status: string) => MEMBER_STATUS[status] ?? status,
+    excludedStatus: (label: string, n: number) => `${label}: ${people(n)}`,
 
     // Columns
     columnsTitle: (on: number, all: number) => `Spalten (${on} von ${all} ausgewählt)`,
@@ -123,6 +131,16 @@ export const COPY = {
     colFamily: 'Familien-ID',
     yes: 'ja',
     no: 'nein',
+    /** ChurchTools' built-in option keys that no masterdata list translates. */
+    builtInLabel: {
+        'familystatus.unknown': 'unbekannt',
+        'familystatus.single': 'ledig',
+        'familystatus.married': 'verheiratet',
+        'familystatus.divorced': 'geschieden',
+        'familystatus.widowed': 'verwitwet',
+        'familystatus.separated': 'getrennt lebend',
+        'familystatus.partnership': 'eingetragene Partnerschaft',
+    } as Record<string, string>,
 
     // Preview
     previewCaption: (group: string) => `Vorschau der Liste für ${group}`,

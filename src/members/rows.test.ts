@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildList } from './rows';
-import { member } from './fixtures';
+import { member } from './test-fixtures';
 
 describe('buildList', () => {
     it('groups families, orders them by name, and numbers them top to bottom', () => {

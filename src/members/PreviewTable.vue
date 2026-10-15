@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { COPY } from '@/shared/copy';
-import { displayOf } from './columns';
+import { COLUMN_ID, displayOf } from './columns';
 import type { CellContext, OutputColumn } from './columns';
 import type { MemberList } from './rows';
 
@@ -70,7 +70,8 @@ const hidden = computed(() => props.list.rows.length - rows.value.length);
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 :aria-label="
-                                    COPY.openPersonInNewTab(
+                                    COPY.openProfileById(
+                                        cell.value,
                                         `${row.member.firstName} ${row.member.lastName}`.trim(),
                                     )
                                 "
@@ -78,10 +79,11 @@ const hidden = computed(() => props.list.rows.length - rows.value.length);
                             >
                             <span
                                 v-else
+                                :title="displayOf(cell) || undefined"
                                 :class="{
                                     preview__number: cell?.kind === 'number',
                                     'preview__family-key':
-                                        key === 'family:key' && row.familySize > 1,
+                                        key === COLUMN_ID.family && row.familySize > 1,
                                 }"
                                 >{{ displayOf(cell) }}</span
                             >

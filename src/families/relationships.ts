@@ -34,7 +34,9 @@ export type RelationshipTypeIds = {
  * accepted for it as well as the built-in key.
  *
  * Every type is optional here. Without one, families rest on the other
- * signals, and the preview says so (`missingTypes`).
+ * signals. Only a missing parent/child type is worth a hint in the preview —
+ * a sibling type is absent at many installations, and siblings are still
+ * found through their shared parent.
  */
 export function resolveRelationshipTypes(types: RelationshipTypeRow[]): RelationshipTypeIds {
     const find = (matches: (t: RelationshipTypeRow) => boolean) =>
@@ -96,9 +98,4 @@ export function memberEdges(
         }
     }
     return edges;
-}
-
-/** Which of the three types this installation does not have — for the preview's hint. */
-export function missingTypes(types: RelationshipTypeIds): (keyof RelationshipTypeIds)[] {
-    return (Object.keys(types) as (keyof RelationshipTypeIds)[]).filter((k) => types[k] === null);
 }

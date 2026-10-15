@@ -2,6 +2,7 @@
  * Raw ChurchTools responses → the list's own shapes. Pure, so every quirk of
  * the API that the list depends on is pinned down by a test.
  */
+import { COPY } from '@/shared/copy';
 import type { FieldDef, FieldKind, FieldOption, GroupInfo, Member } from './types';
 
 type Raw = Record<string, unknown>;
@@ -104,17 +105,6 @@ const MASTERDATA_LIST: Record<string, string> = {
     departmentIds: 'departments',
 };
 
-/** ChurchTools' built-in keys without a masterdata list to translate them. */
-const BUILT_IN_LABELS: Record<string, string> = {
-    'familystatus.unknown': 'unbekannt',
-    'familystatus.single': 'ledig',
-    'familystatus.married': 'verheiratet',
-    'familystatus.divorced': 'geschieden',
-    'familystatus.widowed': 'verwitwet',
-    'familystatus.separated': 'getrennt lebend',
-    'familystatus.partnership': 'eingetragene Partnerschaft',
-};
-
 /**
  * The installation's person fields (`/fields`) that can become an optional
  * column: active, visible in ChurchTools' own UI, person data, and not
@@ -140,7 +130,7 @@ export function toPersonFieldDefs(rawFields: unknown, rawMasterdata: unknown): F
             options: optionsOf(f.options, (o) => {
                 const id = String(o.id);
                 const name = text(o.nameTranslated) ?? text(o.name);
-                return translations.get(id) ?? (name ? (BUILT_IN_LABELS[name] ?? name) : null);
+                return translations.get(id) ?? (name ? (COPY.builtInLabel[name] ?? name) : null);
             }),
         });
     }

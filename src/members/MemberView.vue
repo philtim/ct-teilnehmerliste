@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue';
+import { computed, onMounted, ref, toRef } from 'vue';
 import { COPY } from '@/shared/copy';
 import ColumnPicker from './ColumnPicker.vue';
 import PreviewTable from './PreviewTable.vue';
@@ -18,7 +18,7 @@ const {
     list,
     columns,
     cellContext,
-    hints,
+    hintTexts,
     saveState,
     download,
     reload,
@@ -28,6 +28,11 @@ const {
     setStatus,
     downloadExcel,
 } = useMemberList(toRef(props, 'groupId'));
+
+// The picker that had focus is gone once a group is chosen; the heading of
+// what replaced it takes focus, so keyboard and screen-reader users land here.
+const heading = ref<HTMLElement | null>(null);
+onMounted(() => heading.value?.focus());
 
 const group = computed(() => (state.value.phase === 'ready' ? state.value.data.group : null));
 const total = computed(() => (state.value.phase === 'ready' ? state.value.data.members.length : 0));
@@ -44,7 +49,7 @@ const canDownload = computed(
         <div class="view__bar">
             <div class="view__heading">
                 <p class="view__eyebrow">{{ COPY.chosenGroup }}</p>
-                <h2 class="view__title">
+                <h2 ref="heading" class="view__title" tabindex="-1">
                     <a
                         v-if="group"
                         class="view__group-link"
@@ -62,7 +67,9 @@ const canDownload = computed(
             </button>
         </div>
 
-        <p v-if="state.phase === 'loading'" class="view__status">{{ COPY.loadingGroup }}</p>
+        <p v-if="state.phase === 'loading'" class="view__status" role="status">
+            {{ COPY.loadingGroup }}
+        </p>
 
         <div
             v-else-if="state.phase === 'error'"
@@ -125,21 +132,11 @@ const canDownload = computed(
                     </div>
                 </div>
 
-                <ul
-                    v-if="hints.notLoaded || hints.withoutAddress || hints.relationshipProblem"
-                    class="view__hints"
-                    :aria-label="COPY.hintsTitle"
-                >
-                    <li v-if="hints.relationshipProblem">
-                        {{ COPY.relationshipProblem[hints.relationshipProblem] }}
-                    </li>
-                    <li v-if="hints.notLoaded">{{ COPY.hintNotLoaded(hints.notLoaded) }}</li>
-                    <li v-if="hints.withoutAddress">
-                        {{ COPY.hintWithoutAddress(hints.withoutAddress) }}
-                    </li>
+                <ul v-if="hintTexts.length" class="view__hints" :aria-label="COPY.hintsTitle">
+                    <li v-for="text in hintTexts" :key="text">{{ text }}</li>
                 </ul>
 
-                <fieldset v-if="statusCounts.length > 1" class="view__statuses">
+                <fieldset v-if="statusCounts.length > 0" class="view__statuses">
                     <legend class="view__statuses-legend">{{ COPY.statusFilter }}</legend>
                     <label v-for="[status, count] in statusCounts" :key="status" class="view__chip">
                         <input
@@ -194,6 +191,13 @@ const canDownload = computed(
     margin: 0 0 2px;
     font-size: 12px;
     color: var(--tl-text-secondary);
+}
+.view__title:focus {
+    outline: none;
+}
+.view__title:focus-visible {
+    outline: 2px solid var(--tl-accent);
+    outline-offset: 2px;
 }
 .view__title {
     margin: 0;

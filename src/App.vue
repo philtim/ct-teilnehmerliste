@@ -21,8 +21,16 @@ watch(groupId, (id) => {
     }
 });
 
+/** Set once someone has come back from a group, so the picker takes focus then — not on first load. */
+const returned = ref(false);
+
 function choose(group: GroupInfo) {
     groupId.value = group.id;
+}
+
+function back() {
+    returned.value = true;
+    groupId.value = null;
 }
 
 const version = __APP_VERSION__;
@@ -36,8 +44,8 @@ const commit = __APP_COMMIT__;
             <p class="tl__intro">{{ COPY.appIntro }}</p>
         </header>
 
-        <GroupPicker v-if="groupId === null" @select="choose" />
-        <MemberView v-else :key="groupId" :group-id="groupId" @change="groupId = null" />
+        <GroupPicker v-if="groupId === null" :focus-on-mount="returned" @select="choose" />
+        <MemberView v-else :key="groupId" :group-id="groupId" @change="back" />
 
         <footer class="tl__footer">{{ COPY.footer(version, commit) }}</footer>
     </div>
