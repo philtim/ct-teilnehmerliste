@@ -26,6 +26,8 @@ ADRs are immutable once accepted. To change a decision, write a new ADR that sup
 | [005](005-api-client.md)                 | API client: thin wrapper in `src/shared/api/` with single-seam ESLint guardrail | Accepted |
 | [006](006-linting-and-formatting.md)     | Linting and formatting: ESLint flat config + Prettier + `eslint-plugin-vue`    | Accepted |
 | [007](007-testing-with-vitest.md)        | Testing strategy: Vitest for pure logic                                        | Accepted |
+| [008](008-xlsx-export.md)                | Client-side .xlsx export, zipped synchronously                                 | Accepted |
+| [009](009-permissions-and-personal-data.md) | ChurchTools permissions decide what the list shows                          | Accepted |
 
 ## When to write a new ADR
 

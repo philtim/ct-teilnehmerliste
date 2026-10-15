@@ -1,5 +1,6 @@
 import { COPY } from '@/shared/copy';
-import { ct } from './client';
+import { API_TIMEOUT_MS } from '@/shared/constants';
+import { ct, withTimeout } from './client';
 import { withRetryOn429 } from './retry';
 
 /**
@@ -26,13 +27,12 @@ export async function fetchAllPages<T>(url: string, limit: number): Promise<T[]>
     const separator = url.includes('?') ? '&' : '?';
     const rows: T[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
+        const pageUrl = `${url}${separator}limit=${limit}&page=${page}`;
         const response = await withRetryOn429(() =>
-            ct.get<RawPage<T>>(
-                `${url}${separator}limit=${limit}&page=${page}`,
-                {},
-                {
-                    rawResponse: true,
-                },
+            withTimeout(
+                ct.get<RawPage<T>>(pageUrl, {}, { rawResponse: true }),
+                API_TIMEOUT_MS,
+                pageUrl,
             ),
         );
         const batch = response?.data?.data ?? [];
@@ -42,4 +42,28 @@ export async function fetchAllPages<T>(url: string, limit: number): Promise<T[]>
         if (lastPage !== undefined ? page >= lastPage : batch.length < limit) return rows;
     }
     throw new Error(COPY.listTruncated(url, MAX_PAGES * limit));
+}
+
+type RawCountedPage<T> = { data?: { data?: T[]; meta?: { pagination?: { total?: number } } } };
+
+/**
+ * The first page of a paginated endpoint and how many there are in all —
+ * for a search, where the first page is the answer and the total says
+ * whether to ask for a narrower search.
+ */
+export async function fetchFirstPage<T>(
+    url: string,
+    limit: number,
+): Promise<{ items: T[]; total: number }> {
+    const separator = url.includes('?') ? '&' : '?';
+    const pageUrl = `${url}${separator}limit=${limit}&page=1`;
+    const response = await withRetryOn429(() =>
+        withTimeout(
+            ct.get<RawCountedPage<T>>(pageUrl, {}, { rawResponse: true }),
+            API_TIMEOUT_MS,
+            pageUrl,
+        ),
+    );
+    const items = response?.data?.data ?? [];
+    return { items, total: response?.data?.meta?.pagination?.total ?? items.length };
 }

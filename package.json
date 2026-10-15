@@ -21,13 +21,16 @@
         "typecheck": "vue-tsc -b",
         "test": "vitest run",
         "test:watch": "vitest",
-        "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+        "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle",
         "deploy": "npm run build && node scripts/package.js",
-        "gen:types": "node scripts/gen-ct-types.js"
+        "gen:types": "node scripts/gen-ct-types.js",
+        "check:bundle": "node scripts/check-bundle.js"
     },
     "dependencies": {
         "@churchtools/churchtools-client": "^1.4.0",
-        "vue": "^3.5.13"
+        "fflate": "0.8.3",
+        "vue": "^3.5.13",
+        "write-excel-file": "4.1.1"
     },
     "devDependencies": {
         "@types/node": "^24.3.0",

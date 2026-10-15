@@ -46,9 +46,24 @@ export default ({ mode }: { mode: string }) => {
             __APP_COMMIT__: JSON.stringify(readCommit()),
         },
         resolve: {
-            alias: {
-                '@': fileURLToPath(new URL('./src', import.meta.url)),
-            },
+            alias: [
+                {
+                    find: '@',
+                    replacement: fileURLToPath(new URL('./src', import.meta.url)),
+                },
+                // Route `write-excel-file`'s zip backend through a synchronous
+                // `fflate`: the ChurchTools CSP refuses the Web Worker the
+                // asynchronous one spawns from a `blob:` URL. See the header of
+                // the shim for the full story. Anchored, because a bare
+                // `'fflate'` would also match the shim's own `fflate/browser`
+                // import and alias it to itself.
+                {
+                    find: /^fflate$/,
+                    replacement: fileURLToPath(
+                        new URL('./src/members/fflate-sync.ts', import.meta.url),
+                    ),
+                },
+            ],
         },
         // Proxy /api → the configured ChurchTools instance so dev-mode requests
         // look first-party (avoids CORS + works in Safari without extra setup).
