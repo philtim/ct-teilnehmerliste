@@ -43,3 +43,28 @@ export async function fetchAllPages<T>(url: string, limit: number): Promise<T[]>
     }
     throw new Error(COPY.listTruncated(url, MAX_PAGES * limit));
 }
+
+type RawCountedPage<T> = { data?: { data?: T[]; meta?: { pagination?: { total?: number } } } };
+
+/**
+ * The first page of a paginated endpoint and how many there are in all —
+ * for a search, where the first page is the answer and the total says
+ * whether to ask for a narrower search.
+ */
+export async function fetchFirstPage<T>(
+    url: string,
+    limit: number,
+): Promise<{ items: T[]; total: number }> {
+    const separator = url.includes('?') ? '&' : '?';
+    const response = await withRetryOn429(() =>
+        ct.get<RawCountedPage<T>>(
+            `${url}${separator}limit=${limit}&page=1`,
+            {},
+            {
+                rawResponse: true,
+            },
+        ),
+    );
+    const items = response?.data?.data ?? [];
+    return { items, total: response?.data?.meta?.pagination?.total ?? items.length };
+}

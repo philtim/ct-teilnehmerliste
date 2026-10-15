@@ -13,6 +13,6 @@ export {
     apiDelete,
 } from './client';
 export { ChurchToolsApiError } from './errors';
-export { fetchAllPages } from './pagination';
+export { fetchAllPages, fetchFirstPage } from './pagination';
 export { withRetryOn429, statusOf } from './retry';
 export { mapWithConcurrency } from './concurrency';
