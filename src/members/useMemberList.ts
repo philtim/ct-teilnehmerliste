@@ -1,10 +1,11 @@
-import { computed, ref, shallowRef, watch } from 'vue';
+import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import type { Ref } from 'vue';
-import { buildCatalog, COLUMN_ID, resolveColumns, selectionFor, toStored } from './columns';
+import { COPY } from '@/shared/copy';
+import { buildCatalog, resolveColumns, selectionFor, toStored } from './columns';
 import type { CellContext } from './columns';
 import { GroupLoadError, loadGroup } from './members.api';
 import { buildList } from './rows';
-import { loadSelection, saveSelection } from './selection.store';
+import { clearSelection, loadSelection, saveSelection } from './selection.store';
 import type { GroupData } from './types';
 import { buildSheets, exportFileName } from './workbook';
 
@@ -17,10 +18,10 @@ export type LoadState =
 export type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 export type DownloadState = { phase: 'idle' | 'working' } | { phase: 'error' };
 
-/** Membership statuses that are on unless someone ticks them on. */
+/** Membership statuses that are off unless someone ticks them on. */
 const OFF_BY_DEFAULT = new Set(['to_delete']);
 /** Wait this long after the last tick before storing the choice. */
-const SAVE_DELAY_MS = 800;
+export const SAVE_DELAY_MS = 800;
 
 /**
  * One group's list: load, filter, columns, families, download.
@@ -62,22 +63,53 @@ export function useMemberList(groupId: Ref<number | null>) {
         return { familyKeyOf: (id) => keys.get(id) ?? '' };
     });
 
-    /** What the preview has to say about the data before anyone relies on it. */
-    const hints = computed(() => {
+    /**
+     * What the preview has to say about the data before anyone relies on it —
+     * as sentences, for the preview and for the file's Info sheet alike.
+     */
+    const hintTexts = computed(() => {
+        const current = data.value;
+        if (!current) return [];
         const members = visibleMembers.value;
-        return {
-            notLoaded: members.filter((m) => !m.personLoaded).length,
-            withoutAddress: members.filter((m) => m.personLoaded && !m.street).length,
-            relationshipProblem: data.value?.relationshipProblem ?? null,
-        };
+        const notLoaded = members.filter((m) => !m.personLoaded).length;
+        const withoutAddress = members.filter((m) => m.personLoaded && !m.street).length;
+        return [
+            current.fieldsUnreadable.group && COPY.hintGroupFieldsUnreadable,
+            current.fieldsUnreadable.person && COPY.hintPersonFieldsUnreadable,
+            current.relationshipProblem && COPY.relationshipProblem[current.relationshipProblem],
+            notLoaded > 0 && COPY.hintNotLoaded(notLoaded),
+            withoutAddress > 0 && COPY.hintWithoutAddress(withoutAddress),
+        ].filter((t): t is string => typeof t === 'string');
     });
 
+    /** Statuses left out of the list, with how many members each leaves out. */
+    const excludedStatuses = computed(() =>
+        statusCounts.value
+            .filter(([status]) => !statuses.value.has(status))
+            .map(([status, count]) => COPY.excludedStatus(COPY.memberStatus(status), count)),
+    );
+
     let loadToken = 0;
+
+    /**
+     * The choice is stored a moment after the last tick, so ten ticks are one
+     * write. A pending write is never dropped: loading another group, or the
+     * view going away, sends it at once.
+     */
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    let pendingSave: (() => Promise<void>) | null = null;
+
+    function flushSave() {
+        clearTimeout(saveTimer);
+        const run = pendingSave;
+        pendingSave = null;
+        if (run) void run();
+    }
+    onScopeDispose(flushSave);
 
     async function load(id: number) {
+        flushSave();
         const token = ++loadToken;
-        clearTimeout(saveTimer);
         state.value = { phase: 'loading' };
         saveState.value = 'idle';
         download.value = { phase: 'idle' };
@@ -104,6 +136,7 @@ export function useMemberList(groupId: Ref<number | null>) {
         groupId,
         (id) => {
             if (id === null) {
+                flushSave();
                 loadToken++;
                 state.value = { phase: 'idle' };
             } else {
@@ -113,14 +146,6 @@ export function useMemberList(groupId: Ref<number | null>) {
         { immediate: true },
     );
 
-    function setColumn(id: string, on: boolean) {
-        const next = new Set(selected.value);
-        if (on) next.add(id);
-        else next.delete(id);
-        selected.value = next;
-        scheduleSave();
-    }
-
     function setColumns(ids: string[], on: boolean) {
         const next = new Set(selected.value);
         for (const id of ids) {
@@ -128,12 +153,16 @@ export function useMemberList(groupId: Ref<number | null>) {
             else next.delete(id);
         }
         selected.value = next;
-        scheduleSave();
+        scheduleSave('store');
     }
 
+    /**
+     * Back to the defaults — by forgetting the stored choice rather than
+     * storing the defaults as one, so a later change of defaults applies.
+     */
     function resetColumns() {
         selected.value = selectionFor(catalog.value, null);
-        scheduleSave();
+        scheduleSave('clear');
     }
 
     function setStatus(status: string, on: boolean) {
@@ -143,19 +172,26 @@ export function useMemberList(groupId: Ref<number | null>) {
         statuses.value = next;
     }
 
-    function scheduleSave() {
+    function scheduleSave(kind: 'store' | 'clear') {
         const current = data.value;
         if (!current) return;
         clearTimeout(saveTimer);
         saveState.value = 'saving';
         const token = loadToken;
-        saveTimer = setTimeout(async () => {
-            const ok = await saveSelection(
-                current.group.id,
-                toStored(catalog.value, selected.value),
-            );
+        const id = current.group.id;
+        // Taken now: by the time the write runs, another group may be loaded.
+        const catalogNow = catalog.value;
+        const selectedNow = new Set(selected.value);
+        pendingSave = async () => {
+            const ok =
+                kind === 'clear'
+                    ? await clearSelection(id)
+                    : await saveSelection(id, (previous) =>
+                          toStored(catalogNow, selectedNow, previous),
+                      );
             if (token === loadToken) saveState.value = ok ? 'saved' : 'failed';
-        }, SAVE_DELAY_MS);
+        };
+        saveTimer = setTimeout(flushSave, SAVE_DELAY_MS);
     }
 
     async function downloadExcel() {
@@ -163,25 +199,26 @@ export function useMemberList(groupId: Ref<number | null>) {
         if (!current || download.value.phase === 'working') return;
         download.value = { phase: 'working' };
         try {
-            // The writer is loaded on first use only (ADR-008).
-            const { downloadWorkbook } = await import('./xlsx');
+            // Everything the file shows is taken now, before the writer loads:
+            // a reload in the meantime must not put another state under this name.
             const sheets = buildSheets(list.value, columns.value, cellContext.value, {
                 group: current.group,
                 loadedAt: current.loadedAt,
+                excludedStatuses: excludedStatuses.value,
+                notes: hintTexts.value,
                 version: __APP_VERSION__,
                 commit: __APP_COMMIT__,
             });
-            await downloadWorkbook(sheets, exportFileName(current.group.name, new Date()));
+            const fileName = exportFileName(current.group.name, new Date());
+            // The writer is loaded on first use only (ADR-008).
+            const { downloadWorkbook } = await import('./xlsx');
+            await downloadWorkbook(sheets, fileName);
             download.value = { phase: 'idle' };
         } catch (e) {
             console.error('[teilnehmerliste] download failed:', e);
             download.value = { phase: 'error' };
         }
     }
-
-    const hasNameColumn = computed(
-        () => selected.value.has(COLUMN_ID.lastName) || selected.value.has(COLUMN_ID.firstName),
-    );
 
     return {
         state,
@@ -192,12 +229,11 @@ export function useMemberList(groupId: Ref<number | null>) {
         list,
         columns,
         cellContext,
-        hints,
+        hintTexts,
         saveState,
         download,
-        hasNameColumn,
         reload: () => groupId.value !== null && load(groupId.value),
-        setColumn,
+        setColumn: (id: string, on: boolean) => setColumns([id], on),
         setColumns,
         resetColumns,
         setStatus,

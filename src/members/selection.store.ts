@@ -11,6 +11,7 @@
 import {
     createCustomDataCategory,
     createCustomDataValue,
+    deleteCustomDataValue,
     getCustomDataCategory,
     getCustomDataValues,
     getModule,
@@ -69,8 +70,49 @@ export async function loadSelection(groupId: number): Promise<StoredSelection | 
     }
 }
 
-/** Resolves true when the choice was stored, false when it could not be. */
-export async function saveSelection(groupId: number, selection: StoredSelection): Promise<boolean> {
+/**
+ * Writes run one after another. Two overlapping saves would otherwise both
+ * find no entry and both create one — or both create the category.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function serialised(write: () => Promise<boolean>): Promise<boolean> {
+    const next = queue.then(write, write);
+    queue = next.catch(() => undefined);
+    return next;
+}
+
+/** Forget the stored choice for a group, so its defaults apply again. */
+export function clearSelection(groupId: number): Promise<boolean> {
+    return serialised(async () => {
+        try {
+            const { moduleId, categoryId } = await category();
+            const existing = await entryFor(groupId);
+            if (categoryId !== null && existing) {
+                await deleteCustomDataValue(categoryId, existing.id, moduleId);
+            }
+            return true;
+        } catch {
+            return false;
+        }
+    });
+}
+
+/**
+ * Resolves true when the choice was stored, false when it could not be.
+ * `build` gets the entry as stored right now, so columns this viewer cannot
+ * see keep whatever someone else chose for them (`toStored`).
+ */
+export async function saveSelection(
+    groupId: number,
+    build: (previous: StoredSelection | null) => StoredSelection,
+): Promise<boolean> {
+    return serialised(() => store(groupId, build));
+}
+
+async function store(
+    groupId: number,
+    build: (previous: StoredSelection | null) => StoredSelection,
+): Promise<boolean> {
     try {
         const found = await category();
         const moduleId = found.moduleId;
@@ -88,8 +130,11 @@ export async function saveSelection(groupId: number, selection: StoredSelection)
             categoryId = created.id;
             categoryRequest = Promise.resolve({ moduleId, categoryId });
         }
-        const value = JSON.stringify({ groupId, ...selection } satisfies Entry);
         const existing = await entryFor(groupId);
+        const value = JSON.stringify({
+            groupId,
+            ...build(existing && { selected: existing.selected, known: existing.known }),
+        } satisfies Entry);
         if (existing) {
             await updateCustomDataValue(
                 categoryId,

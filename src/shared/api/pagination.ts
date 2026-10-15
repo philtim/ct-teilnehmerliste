@@ -1,5 +1,6 @@
 import { COPY } from '@/shared/copy';
-import { ct } from './client';
+import { API_TIMEOUT_MS } from '@/shared/constants';
+import { ct, withTimeout } from './client';
 import { withRetryOn429 } from './retry';
 
 /**
@@ -26,13 +27,12 @@ export async function fetchAllPages<T>(url: string, limit: number): Promise<T[]>
     const separator = url.includes('?') ? '&' : '?';
     const rows: T[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
+        const pageUrl = `${url}${separator}limit=${limit}&page=${page}`;
         const response = await withRetryOn429(() =>
-            ct.get<RawPage<T>>(
-                `${url}${separator}limit=${limit}&page=${page}`,
-                {},
-                {
-                    rawResponse: true,
-                },
+            withTimeout(
+                ct.get<RawPage<T>>(pageUrl, {}, { rawResponse: true }),
+                API_TIMEOUT_MS,
+                pageUrl,
             ),
         );
         const batch = response?.data?.data ?? [];
@@ -56,13 +56,12 @@ export async function fetchFirstPage<T>(
     limit: number,
 ): Promise<{ items: T[]; total: number }> {
     const separator = url.includes('?') ? '&' : '?';
+    const pageUrl = `${url}${separator}limit=${limit}&page=1`;
     const response = await withRetryOn429(() =>
-        ct.get<RawCountedPage<T>>(
-            `${url}${separator}limit=${limit}&page=1`,
-            {},
-            {
-                rawResponse: true,
-            },
+        withTimeout(
+            ct.get<RawCountedPage<T>>(pageUrl, {}, { rawResponse: true }),
+            API_TIMEOUT_MS,
+            pageUrl,
         ),
     );
     const items = response?.data?.data ?? [];
