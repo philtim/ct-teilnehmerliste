@@ -1,60 +1,49 @@
-# ct-template
+# Teilnehmerliste
 
-Template for ChurchTools Vue 3 + TypeScript extensions. Forks include:
+ChurchTools-Extension für Gemeinden: eine Gruppe wählen – eine Veranstaltung,
+eine Freizeit, jede Gruppe, die man in ChurchTools sehen darf –, die Mitglieder
+**nach Familien zusammengefasst** in einer Vorschau ansehen, die gewünschten
+Spalten ankreuzen und die Liste als **Excel** herunterladen.
 
-- Vue 3 + Vite + TypeScript scaffold under `src/` with feature-folder structure ([ADR-004](docs/adr/004-module-structure.md)).
-- Hardened API layer in `src/shared/api/` with timeouts, normalized errors, and an ESLint rule that forbids importing `@churchtools/churchtools-client` outside the API folder ([ADR-005](docs/adr/005-api-client.md)).
-- KV-Store helpers split by concern (`module`, `category`, `value`) under `src/shared/kv-store/`.
-- GitHub Actions for CI, release-please, and ZIP deploy to demo + live ChurchTools instances. Workflow inputs are read from `package.json#churchtools` so you only configure metadata in one place.
-- A `Hello-Auth` example slice that calls `/whoami` and renders the user's name — proves the pipeline end-to-end.
+- **Familien** werden aus zwei Signalen erkannt: in ChurchTools hinterlegte
+  Beziehungen (Eltern/Kind, Geschwister, Ehepaar) und gleiche Adresse mit
+  gleichem Nachnamen. Zwei Personen an verschiedenen bekannten Adressen sind
+  nie eine Familie.
+- **Spalten**: Basisdaten (ID mit Link zum Profil, Name, Adresse, E-Mails),
+  Mitgliedschaft (Rolle, Status, Eintrittsdatum), alle Gruppenmitgliedsfelder
+  der gewählten Gruppe und auf Wunsch weitere Personenfelder. Die Auswahl wird
+  pro Gruppe gemerkt.
+- **Berechtigungen**: Die Extension zeigt nur, was der angemeldete Nutzer über
+  die ChurchTools-API sehen darf. Eine Konfiguration ist nicht nötig.
 
-## Use the template
+## Entwicklung
 
 ```bash
-gh repo create my-extension --template <your-org>/ct-template
-cd my-extension
-npm install
-npm run init        # interactive: name, shorty, moduleName → updates everything
-git add -A && git commit -m "chore: scaffold from ct-template"
+npm ci
+cp .env-example .env   # VITE_BASE_URL, VITE_USERNAME, VITE_PASSWORD
+npm run dev
 ```
 
-Then follow [`docs/SETUP.md`](docs/SETUP.md) to wire up GitHub secrets and your first release.
+- `npm run check` — Lint, Typecheck, Tests, Build, Bundle-Budget (läuft in CI).
+- `npm run deploy` — Build und ZIP unter `releases/`.
 
-## Project layout
+Für die lokale Entwicklung muss `http://localhost:5173` in ChurchTools unter
+**System → Integrationen → API → CORS** erlaubt sein.
 
-```
-src/
-├── main.ts                 # boot, mount Vue app
-├── App.vue                 # top-level shell
-├── example/                # Hello-Auth slice (delete or replace)
-│   ├── Example.vue
-│   ├── useExample.ts       # composable
-│   └── example.api.ts      # whoami()
-└── shared/
-    ├── api/                # the only place that imports @churchtools/churchtools-client
-    │   ├── client.ts       # ct, initApi, withTimeout, apiGet/Post/Put/Delete
-    │   ├── errors.ts       # ChurchToolsApiError
-    │   └── pagination.ts   # fetchAllPages
-    ├── kv-store/           # module / category / value helpers
-    ├── ct-types.d.ts       # slim hand-curated CT types
-    ├── constants.ts        # EXTENSION_KEY, API_TIMEOUT_MS
-    ├── reset.css           # dev-only host-style simulation
-    └── types.ts            # CT type re-exports
-```
+## Release und Deploy
 
-## Scripts
+[release-please](https://github.com/googleapis/release-please) pflegt aus den
+Conventional Commits auf `main` einen Release-PR. Sein Merge erzeugt Tag,
+Changelog und GitHub-Release, hängt das ZIP an und lädt es auf die
+Demo-Instanz. Live wird per Hand ausgerollt: **Actions → Deploy ZIP** mit Ziel
+`live` und dem Tag.
 
-- `npm run dev` — Vite dev server with hot reload.
-- `npm run build` — production build to `dist/`.
-- `npm run lint` / `npm run typecheck` / `npm run check` — quality gates (CI runs `check`).
-- `npm run deploy` — build + package into `releases/*.zip`.
-- `npm run gen:types` — opt-in: regenerate full CT types from a live OpenAPI schema.
-- `npm run init` — one-shot template initializer (delete after first run).
+Benötigte Secrets: `CT_DEMO_BASE_URL`, `CT_DEMO_LOGIN_TOKEN`,
+`CT_LIVE_BASE_URL`, `CT_LIVE_LOGIN_TOKEN`. Beim ersten Upload legt die Action
+das Modul `teilnehmerliste` selbst an; die Rechte dafür vergibt man danach in
+ChurchTools.
 
-## Architecture decisions
+## Architektur
 
-See [`docs/adr/`](docs/adr/) for the six ADRs that shape this template.
-
-## License
-
-MIT — see [`LICENSE`](LICENSE).
+Siehe [`docs/adr/`](docs/adr/). Die Familienerkennung stammt aus dem
+RR-Dashboard (`philtim/ct-rr-organigram`).
