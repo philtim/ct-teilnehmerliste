@@ -133,10 +133,25 @@ export function selectionFor(
     );
 }
 
-export function toStored(catalog: CatalogColumn[], selected: ReadonlySet<string>): StoredSelection {
+/**
+ * The choice to store. Columns this viewer's catalogue lacks — a person field
+ * someone with more rights ticked — are carried over from `previous` as they
+ * were, so saving never erases another viewer's choice for a column this one
+ * cannot see.
+ */
+export function toStored(
+    catalog: CatalogColumn[],
+    selected: ReadonlySet<string>,
+    previous: StoredSelection | null = null,
+): StoredSelection {
+    const here = new Set(catalog.map((c) => c.id));
+    const elsewhere = (ids: string[] | undefined) => (ids ?? []).filter((id) => !here.has(id));
     return {
-        selected: catalog.filter((c) => selected.has(c.id)).map((c) => c.id),
-        known: catalog.map((c) => c.id),
+        selected: [
+            ...catalog.filter((c) => selected.has(c.id)).map((c) => c.id),
+            ...elsewhere(previous?.selected),
+        ],
+        known: [...here, ...elsewhere(previous?.known)],
     };
 }
 
@@ -236,8 +251,13 @@ export function fieldCell(field: FieldDef, raw: unknown): Cell {
             return iso ? { kind: 'date', value: iso } : textCell(String(raw));
         }
         case 'number': {
-            const n = typeof raw === 'number' ? raw : Number(String(raw).replace(',', '.'));
-            return Number.isFinite(n) ? { kind: 'number', value: n } : textCell(String(raw));
+            if (typeof raw === 'number') {
+                return Number.isFinite(raw) ? { kind: 'number', value: raw } : null;
+            }
+            const s = String(raw).trim();
+            if (!s) return null;
+            const n = PLAIN_NUMBER.test(s) ? toNumber(s) : NaN;
+            return Number.isFinite(n) ? { kind: 'number', value: n } : textCell(s);
         }
         default:
             return textCell(typeof raw === 'string' ? raw : JSON.stringify(raw));
@@ -256,9 +276,15 @@ function textCell(value: string | null | undefined): Cell {
 /**
  * A plain decimal: no leading zero (a phone number, a postcode), no more than
  * nine digits before the separator (an account number), at most one comma or
- * point.
+ * point. A point followed by exactly three digits is refused: in German
+ * `1.250` is one thousand two hundred and fifty, and reading it as 1.25 would
+ * be a plausible wrong number. Such a column stays text.
  */
-const PLAIN_NUMBER = /^-?(0|[1-9]\d{0,8})([.,]\d+)?$/;
+const PLAIN_NUMBER = /^-?(0|[1-9]\d{0,8})(,\d+|\.\d{1,2}|\.\d{4,})?$/;
+
+function toNumber(s: string): number {
+    return Number(s.replace(',', '.'));
+}
 
 function isNumericColumn(members: Member[], cell: (m: Member, ctx: CellContext) => Cell): boolean {
     const ctx: CellContext = { familyKeyOf: () => '' };
@@ -277,7 +303,7 @@ function isNumericColumn(members: Member[], cell: (m: Member, ctx: CellContext) 
 
 function asNumberCell(c: Cell): Cell {
     if (c === null || c.kind !== 'text') return c;
-    return { kind: 'number', value: Number(c.value.replace(',', '.')) };
+    return { kind: 'number', value: toNumber(c.value) };
 }
 
 /** A cell as the preview shows it — German number and date formats. */
@@ -287,7 +313,12 @@ export function displayOf(c: Cell): string {
         case 'text':
             return c.value;
         case 'number':
-            return c.value.toLocaleString('de-DE');
+            // No thousands separator: Excel shows the cell in General format,
+            // and the preview promises the file — 2026, not 2.026.
+            return c.value.toLocaleString('de-DE', {
+                useGrouping: false,
+                maximumFractionDigits: 20,
+            });
         case 'date': {
             const [y, m, d] = c.value.split('-');
             return `${d}.${m}.${y}`;

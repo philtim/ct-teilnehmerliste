@@ -9,7 +9,7 @@ import {
     toStored,
 } from './columns';
 import type { CellContext } from './columns';
-import { ACCOUNT_NO, EMERGENCY, FEE, member, PAID, SWIM, VEGETARIAN } from './fixtures';
+import { ACCOUNT_NO, EMERGENCY, FEE, member, PAID, SWIM, VEGETARIAN } from './test-fixtures';
 
 const ctx: CellContext = { familyKeyOf: (id) => `F${id}` };
 const catalog = buildCatalog([FEE, PAID, EMERGENCY], [ACCOUNT_NO]);
@@ -58,6 +58,15 @@ describe('selectionFor', () => {
         expect(selected.has('group:3259')).toBe(true);
     });
 
+    it('keeps the choice for columns this viewer cannot see when saving', () => {
+        // Someone with more rights ticked a person field this viewer lacks.
+        const previous = { selected: ['person:iban'], known: ['person:iban', COLUMN_ID.zip] };
+        const stored = toStored(catalog, new Set([COLUMN_ID.zip]), previous);
+        expect(stored.selected).toEqual([COLUMN_ID.zip, 'person:iban']);
+        expect(stored.known).toContain('person:iban');
+        expect(stored.known.filter((id) => id === COLUMN_ID.zip)).toHaveLength(1);
+    });
+
     it('ignores remembered ids that no longer exist', () => {
         const selected = selectionFor(catalog, { selected: ['group:999'], known: ['group:999'] });
         expect(selected.has('group:999')).toBe(false);
@@ -93,6 +102,21 @@ describe('resolveColumns', () => {
         ]);
         expect(columns[1].cell(members[1], ctx)).toEqual({ kind: 'number', value: 12.5 });
         expect(columns[1].cell(members[2], ctx)).toBeNull();
+    });
+
+    it('keeps a German thousands value as text rather than misreading it', () => {
+        const members = [
+            member(1, { groupFields: { '3223': '1.250' } }),
+            member(2, { groupFields: { '3223': '60' } }),
+        ];
+        const [col] = resolveColumns(catalog, new Set(['group:3223']), members);
+        expect(col.cell(members[0], ctx)).toEqual({ kind: 'text', value: '1.250' });
+    });
+
+    it('reads a decimal point with one or two digits as a decimal', () => {
+        const members = [member(1, { groupFields: { '3223': '12.5' } })];
+        const [col] = resolveColumns(catalog, new Set(['group:3223']), members);
+        expect(col.cell(members[0], ctx)).toEqual({ kind: 'number', value: 12.5 });
     });
 
     it('keeps phone numbers and mixed values as text', () => {
@@ -164,7 +188,10 @@ describe('fieldCell', () => {
 describe('displayOf', () => {
     it('shows German dates and numbers', () => {
         expect(displayOf({ kind: 'date', value: '2026-03-12' })).toBe('12.03.2026');
-        expect(displayOf({ kind: 'number', value: 1234.5 })).toBe('1.234,5');
+        expect(displayOf({ kind: 'number', value: 1234.5 })).toBe('1234,5');
+        // As Excel shows a General-format number: no thousands separator.
+        expect(displayOf({ kind: 'number', value: 2026 })).toBe('2026');
+        expect(displayOf({ kind: 'number', value: 12.3456 })).toBe('12,3456');
         expect(displayOf(null)).toBe('');
     });
 });
