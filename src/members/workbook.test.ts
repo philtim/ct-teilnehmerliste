@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildCatalog, COLUMN_ID, resolveColumns } from './columns';
 import { buildList } from './rows';
 import { buildSheets, exportFileName, toExcel } from './workbook';
-import { FEE, member } from './fixtures';
+import { FEE, member } from './test-fixtures';
 
 const group = {
     id: 9,
@@ -14,6 +14,8 @@ const group = {
 const meta = {
     group,
     loadedAt: new Date(2026, 9, 15, 18, 30),
+    excludedStatuses: ['zu löschen: 2 Personen'],
+    notes: ['3 Personen ohne Straße.'],
     version: '1.0.0',
     commit: 'abc1234',
 };
@@ -69,6 +71,10 @@ describe('buildSheets', () => {
         expect(values).toContain(group.frontendUrl);
         expect(values).toContain('Teilnehmerliste 1.0.0 (abc1234)');
         expect(values).toContain(3);
+        expect(values).toContain('zu löschen: 2 Personen');
+        expect(values).toContain('3 Personen ohne Straße.');
+        expect(values).toContain('zu löschen: 2 Personen');
+        expect(values).toContain('3 Personen ohne Straße.');
     });
 });
 

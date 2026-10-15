@@ -40,8 +40,14 @@ so the export works on every small fixture and fails on a real list.
   `HYPERLINK` formula to the profile, dates as dates, and a field column whose
   values are all plain numbers as numbers (so a fee column can be summed; a
   value with a leading zero, like a phone number, keeps the column text).
-  An "Info" sheet names the group, when the data was read, and the extension
+  An "Info" sheet names the group, when the data was read, which statuses
+  were left out, the preview's hints about the data, and the extension
   version that wrote the file.
+- **Link formulas carry their value.** `write-excel-file` writes formulas
+  without a cached result, so Protected View, Quick Look and phone viewers
+  would show the ID column empty. `xlsx.ts` reopens the file with the same
+  synchronous `fflate` and adds the id as each `HYPERLINK` formula's `<v>`
+  (`cached-values.ts`).
 
 ## Consequences
 

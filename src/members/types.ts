@@ -70,6 +70,8 @@ export type GroupData = {
     personFields: FieldDef[];
     /** Edges for family detection, already reduced to the members. */
     relationships: Relationship[];
+    /** Field definitions that could not be read — their columns are missing, not absent. */
+    fieldsUnreadable: { group: boolean; person: boolean };
     /** Why family detection may be incomplete, for the hint above the list. */
     relationshipProblem: 'unreadable' | 'noParentChildType' | null;
     loadedAt: Date;

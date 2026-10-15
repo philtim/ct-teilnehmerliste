@@ -62,8 +62,8 @@ export async function loadGroup(groupId: number): Promise<GroupData> {
             throw new GroupLoadError(statusOf(e) === 403 ? 'forbidden' : 'failed', e);
         }),
         // Without the definitions the values are opaque ids; the list still
-        // works, just without the group's own columns.
-        withRetryOn429(() => apiGet<unknown>(`/groups/${groupId}/memberfields`)).catch(() => []),
+        // works, without the group's own columns — and the preview says so.
+        withRetryOn429(() => apiGet<unknown>(`/groups/${groupId}/memberfields`)).catch(() => null),
         loadPersonFieldDefs(masterdata),
     ]);
 
@@ -98,21 +98,25 @@ export async function loadGroup(groupId: number): Promise<GroupData> {
     return {
         group,
         members,
-        groupFields: toGroupFieldDefs(rawMemberFields),
-        personFields: offeredPersonFields(fieldCatalog, [...persons.values()]),
+        groupFields: rawMemberFields === null ? [] : toGroupFieldDefs(rawMemberFields),
+        personFields:
+            fieldCatalog === null ? [] : offeredPersonFields(fieldCatalog, [...persons.values()]),
+        fieldsUnreadable: { group: rawMemberFields === null, person: fieldCatalog === null },
         relationships: relationships.edges,
         relationshipProblem: relationships.problem,
         loadedAt: new Date(),
     };
 }
 
-/** The installation's person fields; none when the definitions are unreadable. */
-async function loadPersonFieldDefs(masterdata: Promise<Masterdata | null>): Promise<FieldDef[]> {
+/** The installation's person fields; null when the definitions are unreadable. */
+async function loadPersonFieldDefs(
+    masterdata: Promise<Masterdata | null>,
+): Promise<FieldDef[] | null> {
     try {
         const fields = await withRetryOn429(() => apiGet<unknown>('/fields'));
         return toPersonFieldDefs(fields, await masterdata);
     } catch {
-        return [];
+        return null;
     }
 }
 

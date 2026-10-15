@@ -7,6 +7,7 @@
  * is a document of its own.
  */
 import type { CellObject, Sheet } from 'write-excel-file/browser';
+import { COLUMN_ID } from './columns';
 import type { CellContext, OutputColumn, Cell } from './columns';
 import type { MemberList } from './rows';
 import type { GroupInfo } from './types';
@@ -18,6 +19,10 @@ export type ExportMeta = {
     group: GroupInfo;
     /** When the data was read — not when the file was written. */
     loadedAt: Date;
+    /** Statuses filtered out of the list, as sentences ("zu löschen: 2 Personen"). */
+    excludedStatuses: string[];
+    /** The preview's hints about the data, so the file carries them too. */
+    notes: string[];
     /** Extension version and commit, so a questioned list leads back to code. */
     version: string;
     commit: string;
@@ -55,7 +60,7 @@ function listSheet(list: MemberList, columns: OutputColumn[], ctx: CellContext):
         data.push(
             columns.map((column) => {
                 const cell = toExcel(column.cell(row.member, ctx));
-                return column.key === 'family:key' && row.familySize > 1
+                return column.key === COLUMN_ID.family && row.familySize > 1
                     ? { ...cell, backgroundColor: FAMILY_FILL }
                     : cell;
             }),
@@ -113,6 +118,13 @@ function infoSheet(list: MemberList, meta: ExportMeta): ExportSheet {
             row('Familien', list.familyCount),
             row('davon mit mehreren Personen', list.multiFamilyCount),
             row(
+                'Nicht auf der Liste',
+                meta.excludedStatuses.length
+                    ? meta.excludedStatuses.join('; ')
+                    : 'Alle Mitglieder der Gruppe, die du sehen darfst.',
+            ),
+            ...meta.notes.map((note, i) => row(i === 0 ? 'Hinweise' : '', note)),
+            row(
                 'Familien-ID',
                 'Personen mit derselben Familien-ID wohnen zusammen. Erkannt aus den in ' +
                     'ChurchTools hinterlegten Beziehungen (Eltern/Kind, Geschwister, Ehepaar) ' +
@@ -143,12 +155,13 @@ export function exportFileName(groupName: string, date: Date): string {
     const safe = groupName
         .replace(/[\\/:*?"<>|]+/g, ' ')
         .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 80);
+        .trim();
+    // By code point, so an emoji at the cut is not split in half.
+    const short = Array.from(safe).slice(0, 80).join('').trim();
     const day = [
         date.getFullYear(),
         String(date.getMonth() + 1).padStart(2, '0'),
         String(date.getDate()).padStart(2, '0'),
     ].join('-');
-    return `Teilnehmerliste – ${safe || 'Gruppe'} – ${day}.xlsx`;
+    return `Teilnehmerliste – ${short || 'Gruppe'} – ${day}.xlsx`;
 }
