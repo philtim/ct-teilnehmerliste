@@ -1,6 +1,6 @@
 # ADR-003: Testing strategy — no automated tests in v1
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-007](007-testing-with-vitest.md)
 - **Date:** 2026-05-07
 - **Decided by:** template author
 

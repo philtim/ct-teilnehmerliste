@@ -1,16 +1,16 @@
 {
-    "name": "ct-extension-template",
+    "name": "ct-teilnehmerliste",
     "private": true,
     "version": "0.0.0",
-    "description": "Template for ChurchTools Vue 3 + TypeScript extensions.",
+    "description": "ChurchTools-Extension: Gruppe wählen, Mitglieder nach Familien zusammengefasst ansehen und als Excel herunterladen.",
     "license": "MIT",
     "type": "module",
     "churchtools": {
-        "shorty": "ct-template",
-        "moduleName": "CT Extension Template",
-        "extensionKey": "ct-template",
-        "rootElementId": "ct-template-app",
-        "rootClassName": "ct-template-root"
+        "shorty": "teilnehmerliste",
+        "moduleName": "Teilnehmerliste",
+        "extensionKey": "teilnehmerliste",
+        "rootElementId": "teilnehmerliste-app",
+        "rootClassName": "teilnehmerliste-root"
     },
     "scripts": {
         "dev": "vite",
@@ -18,11 +18,12 @@
         "preview": "vite preview",
         "lint": "eslint .",
         "format": "prettier --write .",
-        "typecheck": "vue-tsc --noEmit",
-        "check": "npm run lint && npm run typecheck && npm run build",
+        "typecheck": "vue-tsc -b",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "check": "npm run lint && npm run typecheck && npm run test && npm run build",
         "deploy": "npm run build && node scripts/package.js",
-        "gen:types": "node scripts/gen-ct-types.js",
-        "init": "node scripts/init-template.js"
+        "gen:types": "node scripts/gen-ct-types.js"
     },
     "dependencies": {
         "@churchtools/churchtools-client": "^1.4.0",
@@ -39,6 +40,7 @@
         "prettier": "^3.4.2",
         "typescript": "^5.9.2",
         "vite": "^7.1.2",
+        "vitest": "^5.0.5",
         "vue-tsc": "^2.1.10"
     }
 }

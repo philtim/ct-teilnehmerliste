@@ -21,9 +21,8 @@ jobs:
               run: echo "key=$(node -p "require('./package.json').churchtools.extensionKey")" >> "$GITHUB_OUTPUT"
 
             - run: npm ci
-            - run: npm run lint
-            - run: npm run typecheck
-            - run: npm run build
+            # One definition of "green": the same script developers run.
+            - run: npm run check
               env:
                   VITE_KEY: ${{ steps.meta.outputs.key }}
                   VITE_BASE_URL: https://example.church.tools

@@ -35,7 +35,7 @@ export default ({ mode }: { mode: string }) => {
     // Prefer build-env (CI sets VITE_KEY explicitly), then package.json's
     // churchtools.extensionKey as the local default. Keeps `npm run dev`
     // working out of the box without an .env file.
-    const extensionKey = env.VITE_KEY ?? pkg.churchtools?.extensionKey ?? 'ct-template';
+    const extensionKey = env.VITE_KEY ?? pkg.churchtools?.extensionKey ?? 'teilnehmerliste';
     const baseUrl = env.VITE_BASE_URL;
 
     return defineConfig({
