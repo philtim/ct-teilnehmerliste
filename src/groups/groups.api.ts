@@ -86,7 +86,9 @@ export type SearchResult = { groups: GroupInfo[]; total: number };
  * - A pasted link finds that one group, or nothing if this viewer cannot see
  *   it — searching the link text as a name would only produce noise.
  * - A bare number is both: the group with that id, listed first, and the
- *   groups whose name contains it ("2026").
+ *   groups whose name contains it ("2026"). The id match ignores the type
+ *   filter — asking for a group by its id is asking for that group. If the
+ *   id lookup fails, the name matches still show.
  * - Anything else is a name search, narrowed by the type when one is chosen.
  *   A type alone lists that type's groups.
  */
@@ -110,7 +112,7 @@ export async function runSearch(
     }
 
     const [direct, byName] = await Promise.all([
-        api.findGroup(groupRef),
+        api.findGroup(groupRef).catch(() => null),
         api.searchGroups(trimmed.replace(/^#/, ''), groupTypeId),
     ]);
     if (!direct || byName.groups.some((g) => g.id === direct.id)) return byName;

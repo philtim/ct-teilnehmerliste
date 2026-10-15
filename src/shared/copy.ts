@@ -79,8 +79,8 @@ export const COPY = {
             'werden deshalb nur über Adresse, Nachname oder eine Geschwister-Beziehung erkannt.',
     },
     hintGroupFieldsUnreadable:
-        'Die Felder dieser Gruppe konnten nicht gelesen werden. Ihre Spalten fehlen ' +
-        'deshalb – bitte die Seite neu laden.',
+        'Die Felder dieser Gruppe konnten nicht gelesen werden – vielleicht fehlt dir das ' +
+        'Recht dazu. Ihre Spalten fehlen deshalb in der Liste.',
     hintPersonFieldsUnreadable:
         'Die Personenfelder von ChurchTools konnten nicht gelesen werden. Weitere ' +
         'Personenfelder stehen deshalb nicht zur Auswahl.',

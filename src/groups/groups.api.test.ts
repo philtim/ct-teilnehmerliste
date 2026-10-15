@@ -64,6 +64,15 @@ describe('runSearch', () => {
         });
     });
 
+    it('still shows the name matches when the id lookup fails', async () => {
+        const a = api({}, [group(5, 'Camp 2026')]);
+        a.findGroup.mockRejectedValue(new Error('HTTP 500'));
+        expect(await runSearch('2026', null, a)).toEqual({
+            groups: [group(5, 'Camp 2026')],
+            total: 1,
+        });
+    });
+
     it('does not list a group twice when its id is also in its name', async () => {
         const a = api({ 5: group(5) }, [group(5)]);
         expect(await runSearch('#5', null, a)).toEqual({ groups: [group(5)], total: 1 });
