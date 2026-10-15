@@ -1,0 +1,8 @@
+dist
+node_modules
+releases
+src/shared/ct-types.d.ts
+package-lock.json
+
+# Documentation is hand-curated prose — don't reflow tables or change *italic* to _italic_.
+docs/

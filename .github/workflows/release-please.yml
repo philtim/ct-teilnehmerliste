@@ -1,0 +1,77 @@
+name: Release Please
+
+# release-please reads conventional commits on main and maintains a rolling
+# "release PR" that bumps package.json + writes CHANGELOG.md. When that PR
+# is merged it tags vX.Y.Z and creates a GitHub release with the changelog.
+# This workflow then builds the ZIP, attaches it to the release, and uploads
+# it to the configured ChurchTools demo instance.
+
+on:
+    push:
+        branches: [main]
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    release-please:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: googleapis/release-please-action@v4
+              id: release
+              with:
+                  config-file: release-please-config.json
+                  manifest-file: .release-please-manifest.json
+
+            - uses: actions/checkout@v4
+              if: ${{ steps.release.outputs.release_created }}
+
+            - uses: actions/setup-node@v4
+              if: ${{ steps.release.outputs.release_created }}
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Read churchtools metadata
+              id: meta
+              if: ${{ steps.release.outputs.release_created }}
+              run: |
+                  set -euo pipefail
+                  echo "key=$(node -p "require('./package.json').churchtools.extensionKey")" >> "$GITHUB_OUTPUT"
+                  echo "shorty=$(node -p "require('./package.json').churchtools.shorty")" >> "$GITHUB_OUTPUT"
+                  echo "module=$(node -p "require('./package.json').churchtools.moduleName")" >> "$GITHUB_OUTPUT"
+
+            - name: Install dependencies
+              if: ${{ steps.release.outputs.release_created }}
+              run: npm ci
+
+            - name: Build & package ZIP
+              if: ${{ steps.release.outputs.release_created }}
+              env:
+                  VITE_KEY: ${{ steps.meta.outputs.key }}
+                  VITE_BASE_URL: https://placeholder.church.tools
+              run: npm run deploy
+
+            - name: Locate ZIP artefact
+              id: pkg
+              if: ${{ steps.release.outputs.release_created }}
+              run: echo "path=$(ls releases/*.zip | head -1)" >> "$GITHUB_OUTPUT"
+
+            - name: Attach ZIP to GitHub release
+              if: ${{ steps.release.outputs.release_created }}
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ steps.release.outputs.tag_name }}
+                  ZIP_PATH: ${{ steps.pkg.outputs.path }}
+              run: gh release upload "$TAG" "$ZIP_PATH" --clobber
+
+            - name: Upload ZIP to demo test instance
+              if: ${{ steps.release.outputs.release_created }}
+              uses: ./.github/actions/upload-to-churchtools
+              with:
+                  base-url: ${{ secrets.CT_DEMO_BASE_URL }}
+                  login-token: ${{ secrets.CT_DEMO_LOGIN_TOKEN }}
+                  zip-path: ${{ steps.pkg.outputs.path }}
+                  shorty: ${{ steps.meta.outputs.shorty }}
+                  module-name: ${{ steps.meta.outputs.module }}

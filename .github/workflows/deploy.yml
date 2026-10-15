@@ -1,0 +1,82 @@
+name: Deploy ZIP
+
+# Manually deploy a ZIP from an existing GitHub release to the demo or live
+# ChurchTools instance. Use this to re-deploy a release that's already been
+# built (e.g. after a botched first deploy) or to roll a specific tag forward
+# to live without cutting a new release.
+
+on:
+    workflow_dispatch:
+        inputs:
+            target:
+                description: Ziel-Instanz
+                required: true
+                type: choice
+                options:
+                    - demo
+                    - live
+            tag:
+                description: Release-Tag (leer = latest)
+                required: false
+                type: string
+
+permissions:
+    contents: read
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Read churchtools metadata
+              id: meta
+              run: |
+                  set -euo pipefail
+                  echo "shorty=$(node -p "require('./package.json').churchtools.shorty")" >> "$GITHUB_OUTPUT"
+                  echo "module=$(node -p "require('./package.json').churchtools.moduleName")" >> "$GITHUB_OUTPUT"
+
+            - name: Resolve release tag
+              id: tag
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  INPUT_TAG: ${{ inputs.tag }}
+              run: |
+                  set -euo pipefail
+                  if [ -n "$INPUT_TAG" ]; then
+                      TAG="$INPUT_TAG"
+                  else
+                      TAG=$(gh release view --json tagName -q .tagName)
+                  fi
+                  if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+                      echo "::error::Could not resolve a release tag"
+                      exit 1
+                  fi
+                  echo "Using tag: $TAG"
+                  echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+            - name: Download ZIP from release
+              id: dl
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ steps.tag.outputs.tag }}
+              run: |
+                  set -euo pipefail
+                  mkdir -p releases
+                  gh release download "$TAG" --pattern '*.zip' --dir releases
+                  ZIP_PATH=$(ls releases/*.zip | head -1)
+                  if [ -z "$ZIP_PATH" ]; then
+                      echo "::error::No ZIP artefact found on release $TAG"
+                      exit 1
+                  fi
+                  echo "Found: $ZIP_PATH"
+                  echo "path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+
+            - name: Upload to ChurchTools (${{ inputs.target }})
+              uses: ./.github/actions/upload-to-churchtools
+              with:
+                  base-url: ${{ inputs.target == 'live' && secrets.CT_LIVE_BASE_URL || secrets.CT_DEMO_BASE_URL }}
+                  login-token: ${{ inputs.target == 'live' && secrets.CT_LIVE_LOGIN_TOKEN || secrets.CT_DEMO_LOGIN_TOKEN }}
+                  zip-path: ${{ steps.dl.outputs.path }}
+                  shorty: ${{ steps.meta.outputs.shorty }}
+                  module-name: ${{ steps.meta.outputs.module }}

@@ -1,0 +1,81 @@
+name: Upload ZIP to ChurchTools
+description: |
+    Authenticates against a ChurchTools instance with a service login token,
+    finds (or self-bootstraps) a custom module by shorty, and uploads a ZIP
+    artefact as the module's package. Used by both release-please.yml (auto
+    deploy after release) and deploy.yml (manual deploy with target choice).
+
+inputs:
+    base-url:
+        description: ChurchTools base URL, e.g. https://demo.church.tools
+        required: true
+    login-token:
+        description: Service-account login token for the target instance
+        required: true
+    zip-path:
+        description: Path to the ZIP artefact to upload
+        required: true
+    shorty:
+        description: Custom module shorty (used to look up or create the module)
+        required: true
+    module-name:
+        description: Display name for the module if it has to be created
+        required: true
+
+runs:
+    using: composite
+    steps:
+        - name: Authenticate, resolve module, and upload ZIP
+          shell: bash
+          env:
+              CT_BASE_URL: ${{ inputs.base-url }}
+              CT_LOGIN_TOKEN: ${{ inputs.login-token }}
+              ZIP_PATH: ${{ inputs.zip-path }}
+              SHORTY: ${{ inputs.shorty }}
+              MODULE_NAME: ${{ inputs.module-name }}
+          run: |
+              set -euo pipefail
+
+              COOKIE_JAR=$(mktemp)
+              trap 'rm -f "$COOKIE_JAR"' EXIT
+
+              echo "Authenticating against $CT_BASE_URL..."
+              curl -fsS -c "$COOKIE_JAR" \
+                  "$CT_BASE_URL/api/whoami?login_token=$CT_LOGIN_TOKEN" \
+                  > /dev/null
+
+              echo "Fetching CSRF token..."
+              CSRF=$(curl -fsS -b "$COOKIE_JAR" "$CT_BASE_URL/api/csrftoken" | jq -r '.data')
+
+              echo "Looking up custom module with shorty=$SHORTY..."
+              MODULE_ID=$(curl -fsS -b "$COOKIE_JAR" "$CT_BASE_URL/api/custommodules" \
+                  | jq -r --arg shorty "$SHORTY" '.data[] | select(.shorty == $shorty) | .id')
+
+              if [ -z "$MODULE_ID" ] || [ "$MODULE_ID" = "null" ]; then
+                  echo "No module found with shorty=$SHORTY — creating one."
+                  CREATE_PAYLOAD=$(jq -n --arg name "$MODULE_NAME" --arg shorty "$SHORTY" \
+                      '{name: $name, shorty: $shorty, sortKey: 0, inMenu: true, description: ""}')
+                  MODULE_ID=$(curl -fsS -b "$COOKIE_JAR" \
+                      -H "Csrf-Token: $CSRF" \
+                      -H 'Content-Type: application/json' \
+                      -X POST \
+                      -d "$CREATE_PAYLOAD" \
+                      "$CT_BASE_URL/api/custommodules" \
+                      | jq -r '.data.id')
+                  if [ -z "$MODULE_ID" ] || [ "$MODULE_ID" = "null" ]; then
+                      echo "::error::Failed to create custom module"
+                      exit 1
+                  fi
+                  echo "Created module ID: $MODULE_ID"
+              else
+                  echo "Found existing module ID: $MODULE_ID"
+              fi
+
+              echo "Uploading $ZIP_PATH..."
+              curl -fsS -b "$COOKIE_JAR" \
+                  -H "Csrf-Token: $CSRF" \
+                  -F "files[]=@$ZIP_PATH" \
+                  "$CT_BASE_URL/api/files/custom_module/$MODULE_ID"
+
+              echo
+              echo "Upload complete."
