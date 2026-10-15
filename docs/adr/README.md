@@ -1,8 +1,8 @@
 # Architecture Decision Records
 
-This folder contains short documents capturing architectural decisions baked into this template. Each ADR is one decision, written at the time it was made, with the reasoning preserved for future readers.
+This folder contains short documents capturing the architectural decisions behind this extension. ADR-001 to ADR-006 come from `ct-template`. Each ADR is one decision, written at the time it was made, with the reasoning preserved for future readers.
 
-When you fork this template, leave the ADRs in place — they explain *why* the structure looks the way it does. If your project changes one of these decisions, write a new ADR that supersedes the old one rather than rewriting the original.
+If a decision changes, write a new ADR that supersedes the old one rather than rewriting the original.
 
 ## Format
 
@@ -21,10 +21,11 @@ ADRs are immutable once accepted. To change a decision, write a new ADR that sup
 | ---------------------------------------- | ------------------------------------------------------------------------------ | -------- |
 | [001](001-frontend-framework.md)         | Frontend framework: Vue 3 with Composition API                                 | Accepted |
 | [002](002-css-scoping.md)                | CSS scoping: `<style scoped>` + BEM under a project-wide root class            | Accepted |
-| [003](003-testing-strategy.md)           | Testing strategy: no automated tests in v1                                     | Accepted |
+| [003](003-testing-strategy.md)           | Testing strategy: no automated tests in v1                                     | Superseded by 007 |
 | [004](004-module-structure.md)           | Module structure: feature folders + `shared/`                                  | Accepted |
 | [005](005-api-client.md)                 | API client: thin wrapper in `src/shared/api/` with single-seam ESLint guardrail | Accepted |
 | [006](006-linting-and-formatting.md)     | Linting and formatting: ESLint flat config + Prettier + `eslint-plugin-vue`    | Accepted |
+| [007](007-testing-with-vitest.md)        | Testing strategy: Vitest for pure logic                                        | Accepted |
 
 ## When to write a new ADR
 
