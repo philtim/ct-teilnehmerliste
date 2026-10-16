@@ -16,9 +16,9 @@ describe('group parameter', () => {
 
     it('tells a parameter that is no id from none at all', () => {
         expect(readGroupParam(`${PAGE}?gruppe=12abc`)).toBe('invalid');
-        expect(readGroupParam(`${PAGE}?gruppe=`)).toBe('invalid');
         expect(readGroupParam(`${PAGE}?gruppe=1234567890`)).toBe('invalid');
         expect(readGroupParam(PAGE)).toBeNull();
+        expect(readGroupParam(`${PAGE}?gruppe=`)).toBeNull();
         expect(readGroupParam('not a url')).toBeNull();
     });
 });

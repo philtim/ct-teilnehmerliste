@@ -18,6 +18,11 @@ describe('parseGroupRef', () => {
         const here = 'https://gemeinde.church.tools';
         expect(parseGroupRef('https://gemeinde.church.tools/groups/12', here)).toBe(12);
         expect(parseGroupRef('https://andere.church.tools/groups/12', here)).toBeNull();
+        expect(parseGroupRef('andere.church.tools/groups/12?tab=members', here)).toBeNull();
+        expect(parseGroupRef('gemeinde.church.tools/groups/12?tab=members', here)).toBe(12);
+        expect(parseGroupRef('http://gemeinde.church.tools/groups/12', here)).toBe(12);
+        expect(parseGroupRef('/groups/12', here)).toBe(12);
+        expect(parseGroupRef('groups/12', here)).toBe(12);
         expect(parseGroupRef('#12', here)).toBe(12);
     });
 
@@ -90,6 +95,12 @@ describe('runSearch', () => {
         const a = api({ 8: group(8) }, []);
         expect(await runSearch('8', null, a)).toEqual({ groups: [group(8)], total: 1 });
         expect(a.searchGroups).not.toHaveBeenCalled();
+    });
+
+    it('fails, rather than finding nothing, when a single digit cannot be looked up', async () => {
+        const a = api({}, []);
+        a.findGroup.mockRejectedValue(new Error('HTTP 500'));
+        await expect(runSearch('8', null, a)).rejects.toThrow('HTTP 500');
     });
 
     it('keeps the id match when the name search fails', async () => {

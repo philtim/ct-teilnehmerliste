@@ -67,9 +67,16 @@ export function parseGroupRef(input: string, origin?: string): number | null {
     if (bare) return Number(bare[1]);
     const link = /(?:^|\/)groups\/(\d{1,9})(?:[/?#]|$)/.exec(trimmed);
     if (!link) return null;
-    if (origin && /^https?:\/\//i.test(trimmed)) {
+    // Anything before the path names a host — with or without a scheme, as
+    // copied from an address bar. Only the host is compared: http or https
+    // is the same instance.
+    const before = trimmed.slice(0, link.index).replace(/\/+$/, '');
+    if (origin && before) {
         try {
-            if (new URL(trimmed).origin !== new URL(origin).origin) return null;
+            const withScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)
+                ? trimmed
+                : `https://${trimmed}`;
+            if (new URL(withScheme).host !== new URL(origin).host) return null;
         } catch {
             return null;
         }
@@ -143,6 +150,9 @@ export async function runSearch(
         name.length < MIN_QUERY ? NONE : api.searchGroups(name, groupTypeId),
     ]);
     const direct = byId.status === 'fulfilled' ? byId.value : null;
+    // A single digit has no name search to fall back on: a failed lookup is
+    // a failure, not "no such group".
+    if (byId.status === 'rejected' && name.length < MIN_QUERY) throw byId.reason;
     if (byName.status === 'rejected') {
         // The name search failed: the id match alone is still an answer.
         if (direct) return { groups: [direct], total: 1 };

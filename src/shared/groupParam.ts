@@ -8,7 +8,7 @@
  */
 const PARAM = 'gruppe';
 
-/** The group id; null for none; `'invalid'` for a parameter that is no id. */
+/** The group id; null for none (or empty); `'invalid'` for a parameter that is no id. */
 export function readGroupParam(href: string): number | null | 'invalid' {
     let value: string | null;
     try {
@@ -16,7 +16,7 @@ export function readGroupParam(href: string): number | null | 'invalid' {
     } catch {
         return null;
     }
-    if (value === null) return null;
+    if (value === null || value === '') return null;
     return /^\d{1,9}$/.test(value) ? Number(value) : 'invalid';
 }
 
