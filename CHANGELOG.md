@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/philtim/ct-teilnehmerliste/compare/v1.0.1...v1.0.2) (2026-10-16)
+
+
+### Bug Fixes
+
+* **api:** fall back to the page's own origin, not a host baked into the build ([1a0298d](https://github.com/philtim/ct-teilnehmerliste/commit/1a0298d3ec2271ac961536c462ecc8ca56d0fa28))
+* **kv-store:** let a row without a value through instead of failing the read ([625f3e3](https://github.com/philtim/ct-teilnehmerliste/commit/625f3e315abe26afbda4ec042c8c0d9328aef207))
+
 ## [1.0.1](https://github.com/philtim/ct-teilnehmerliste/compare/v1.0.0...v1.0.1) (2026-10-16)
 
 
