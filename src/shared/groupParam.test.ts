@@ -14,9 +14,11 @@ describe('group parameter', () => {
         expect(withGroupParam(`${PAGE}?gruppe=12`, null)).toBe(PAGE);
     });
 
-    it('ignores anything but a plain id', () => {
-        expect(readGroupParam(`${PAGE}?gruppe=12abc`)).toBeNull();
+    it('tells a parameter that is no id from none at all', () => {
+        expect(readGroupParam(`${PAGE}?gruppe=12abc`)).toBe('invalid');
+        expect(readGroupParam(`${PAGE}?gruppe=1234567890`)).toBe('invalid');
         expect(readGroupParam(PAGE)).toBeNull();
+        expect(readGroupParam(`${PAGE}?gruppe=`)).toBeNull();
         expect(readGroupParam('not a url')).toBeNull();
     });
 });

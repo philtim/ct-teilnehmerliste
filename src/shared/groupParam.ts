@@ -8,13 +8,16 @@
  */
 const PARAM = 'gruppe';
 
-export function readGroupParam(href: string): number | null {
+/** The group id; null for none (or empty); `'invalid'` for a parameter that is no id. */
+export function readGroupParam(href: string): number | null | 'invalid' {
+    let value: string | null;
     try {
-        const value = new URL(href).searchParams.get(PARAM);
-        return value && /^\d{1,9}$/.test(value) ? Number(value) : null;
+        value = new URL(href).searchParams.get(PARAM);
     } catch {
         return null;
     }
+    if (value === null || value === '') return null;
+    return /^\d{1,9}$/.test(value) ? Number(value) : 'invalid';
 }
 
 export function withGroupParam(href: string, groupId: number | null): string {

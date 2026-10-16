@@ -36,12 +36,9 @@ onMounted(() => heading.value?.focus());
 
 const group = computed(() => (state.value.phase === 'ready' ? state.value.data.group : null));
 const total = computed(() => (state.value.phase === 'ready' ? state.value.data.members.length : 0));
-const canDownload = computed(
-    () =>
-        list.value.rows.length > 0 &&
-        columns.value.length > 0 &&
-        download.value.phase !== 'working',
-);
+// Not disabled while the file is being written: a disabled button drops
+// keyboard focus to the page. A second press is ignored by `downloadExcel`.
+const canDownload = computed(() => list.value.rows.length > 0 && columns.value.length > 0);
 </script>
 
 <template>
@@ -115,6 +112,7 @@ const canDownload = computed(
                             type="button"
                             class="view__primary"
                             :disabled="!canDownload"
+                            :aria-busy="download.phase === 'working'"
                             @click="downloadExcel"
                         >
                             {{ download.phase === 'working' ? COPY.downloading : COPY.download }}
@@ -125,9 +123,6 @@ const canDownload = computed(
                             role="alert"
                         >
                             {{ COPY.downloadFailed }}
-                        </p>
-                        <p v-else-if="columns.length === 0" class="view__download-hint">
-                            {{ COPY.noColumns }}
                         </p>
                     </div>
                 </div>
@@ -278,11 +273,6 @@ const canDownload = computed(
     margin: 0;
     font-size: 13px;
     color: var(--tl-error);
-}
-.view__download-hint {
-    margin: 0;
-    font-size: 13px;
-    color: var(--tl-text-secondary);
 }
 .view__primary,
 .view__secondary {
