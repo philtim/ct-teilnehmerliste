@@ -18,9 +18,6 @@ export async function getCustomDataValues<T extends object>(
     );
     return values.map((val) => {
         const { value, ...rest } = val;
-        if (value == null) {
-            throw new Error(`Custom data value ${val.id} has null or undefined 'value' field.`);
-        }
         return { ...rest, ...safeParseJSON(value, {} as T) };
     });
 }
