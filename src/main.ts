@@ -12,12 +12,12 @@ declare const window: Window &
     };
 
 // In dev we go through the Vite proxy on '' (same-origin /api/...).
-// In production the host injects window.settings.base_url; we fall back to
-// VITE_BASE_URL for the rare case the host doesn't set it.
+// In production the host injects window.settings.base_url; without it, the
+// page's own origin, since the extension is served from the instance.
 const baseUrl =
     import.meta.env.MODE === 'development'
         ? ''
-        : (window.settings?.base_url ?? import.meta.env.VITE_BASE_URL);
+        : (window.settings?.base_url ?? window.location.origin);
 initApi(baseUrl);
 
 // Dev-only auto-login. Production runs inside the host's authenticated session.

@@ -32,7 +32,7 @@ export function initApi(baseUrl: string): void {
  * it, the page's own origin: the extension is served from the instance.
  */
 export function getOriginUrl(): string {
-    const raw = window.settings?.base_url ?? import.meta.env.VITE_BASE_URL ?? '';
+    const raw = window.settings?.base_url ?? '';
     try {
         return new URL(raw, window.location.href).origin;
     } catch {
