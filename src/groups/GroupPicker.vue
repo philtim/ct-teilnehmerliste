@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { COPY } from '@/shared/copy';
+import { getOriginUrl } from '@/shared/api';
 import { loadGroupVocabulary, runSearch, SEARCH_LIMIT } from './groups.api';
-import type { Choice } from './groups.api';
+import type { Choice, SearchResult } from './groups.api';
 import type { GroupInfo } from '@/members/types';
 
 /**
@@ -22,7 +23,7 @@ type SearchState =
     | { phase: 'idle' }
     | { phase: 'searching' }
     | { phase: 'error' }
-    | { phase: 'done'; groups: GroupInfo[]; total: number };
+    | ({ phase: 'done' } & SearchResult);
 const result = ref<SearchState>({ phase: 'idle' });
 
 const ids = { query: useId(), type: useId(), results: useId() };
@@ -52,7 +53,7 @@ async function run() {
     const mine = ++token;
     result.value = { phase: 'searching' };
     try {
-        const found = await runSearch(text, typeId.value);
+        const found = await runSearch(text, typeId.value, undefined, getOriginUrl());
         if (mine !== token) return;
         result.value = found ? { phase: 'done', ...found } : { phase: 'idle' };
     } catch (e) {
@@ -72,6 +73,7 @@ const status = computed(() => {
         case 'error':
             return COPY.searchFailed;
     }
+    if (r.tooShort) return COPY.searchTooShort;
     if (r.groups.length === 0) return COPY.searchNoHits;
     const count =
         r.total > r.groups.length

@@ -36,6 +36,8 @@ export const COPY = {
     searching: 'Suche …',
     searchFailed: 'Die Suche ist fehlgeschlagen. Bitte noch einmal versuchen.',
     searchNoHits: 'Keine Gruppe gefunden, die du sehen darfst.',
+    invalidGroupLink: 'Der Link enthält keine gültige Gruppen-ID. Bitte die Gruppe hier auswählen.',
+    searchTooShort: 'Bitte mindestens zwei Zeichen eingeben – oder die ID der Gruppe.',
     searchHits: (n: number) => (n === 1 ? '1 Gruppe gefunden.' : `${n} Gruppen gefunden.`),
     searchMoreHits: (shown: number, total: number) =>
         `${total} Gruppen gefunden, die ersten ${shown} werden gezeigt.`,
