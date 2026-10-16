@@ -23,7 +23,6 @@
         "test:watch": "vitest",
         "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle",
         "deploy": "npm run build && node scripts/package.js",
-        "gen:types": "node scripts/gen-ct-types.js",
         "check:bundle": "node scripts/check-bundle.js"
     },
     "dependencies": {
@@ -39,7 +38,6 @@
         "@vue/eslint-config-typescript": "^14.2.0",
         "eslint": "^9.17.0",
         "eslint-plugin-vue": "^9.32.0",
-        "openapi-typescript": "^7.4.4",
         "prettier": "^3.4.2",
         "typescript": "^5.9.2",
         "vite": "^7.1.2",

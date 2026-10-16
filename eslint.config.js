@@ -15,7 +15,6 @@ export default [
             '**/node_modules/**',
             '**/releases/**',
             'src/shared/ct-types.d.ts',
-            'src/shared/ct-types.generated.d.ts',
         ],
     },
     ...pluginVue.configs['flat/recommended'],
