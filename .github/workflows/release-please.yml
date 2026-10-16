@@ -50,7 +50,6 @@ jobs:
               if: ${{ steps.release.outputs.release_created }}
               env:
                   VITE_KEY: ${{ steps.meta.outputs.key }}
-                  VITE_BASE_URL: https://placeholder.church.tools
               run: npm run deploy
 
             - name: Locate ZIP artefact

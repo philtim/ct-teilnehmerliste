@@ -10,6 +10,7 @@
 import { churchtoolsClient } from '@churchtools/churchtools-client';
 import { API_TIMEOUT_MS } from '@/shared/constants';
 import { ChurchToolsApiError } from './errors';
+import { statusOf } from './retry';
 
 /** Re-exported raw client. Use `apiGet/apiPost/...` for timeout + error normalization. */
 export const ct = churchtoolsClient;
@@ -27,10 +28,11 @@ export function initApi(baseUrl: string): void {
 /**
  * Origin of the host instance. The host injects `window.settings.base_url`
  * (which may carry a trailing path segment when mounted inside a route);
- * we normalize to a clean origin so callers can build links freely.
+ * we normalize to a clean origin so callers can build links freely. Without
+ * it, the page's own origin: the extension is served from the instance.
  */
 export function getOriginUrl(): string {
-    const raw = window.settings?.base_url ?? import.meta.env.VITE_BASE_URL ?? '';
+    const raw = window.settings?.base_url ?? '';
     try {
         return new URL(raw, window.location.href).origin;
     } catch {
@@ -58,17 +60,9 @@ export async function withTimeout<T>(p: Promise<T>, ms: number, endpoint: string
     }
 }
 
-function extractStatus(e: unknown): number | undefined {
-    if (typeof e === 'object' && e !== null) {
-        const maybe = e as { response?: { status?: number }; status?: number };
-        return maybe.response?.status ?? maybe.status;
-    }
-    return undefined;
-}
-
 function normalizeError(endpoint: string, e: unknown): ChurchToolsApiError {
     if (e instanceof ChurchToolsApiError) return e;
-    const status = extractStatus(e) ?? 0;
+    const status = statusOf(e) ?? 0;
     const message = e instanceof Error ? e.message : String(e);
     return new ChurchToolsApiError(endpoint, status, message);
 }

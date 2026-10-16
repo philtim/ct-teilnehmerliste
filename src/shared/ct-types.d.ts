@@ -1,39 +1,8 @@
 /**
- * Slim hand-curated subset of the ChurchTools API types — just what the
- * template's example slice + KV-Store actually use. The full generated
- * types are ~780 KB; pulling them in by default would bloat the template.
- *
- * To get the full set: `npm run gen:types` (writes ct-types.generated.d.ts).
- * Then update imports in src/shared/types.ts to point at the generated file.
+ * Hand-written subset of the ChurchTools API types: the KV-Store objects the
+ * extension writes. Everything it reads is parsed from `unknown` in
+ * `members/parse.ts`, so no other response shape is declared here.
  */
-
-/** Person object as returned by GET /whoami and most person endpoints. */
-export type Person = {
-    id: number;
-    guid: string;
-    firstName?: string;
-    lastName?: string;
-    nickname?: string;
-    email?: string;
-    imageUrl?: string | null;
-    isArchived?: boolean;
-};
-
-/** Lightweight reference to a person, embedded in other domain objects. */
-export type DomainObjectPerson = {
-    apiUrl: string;
-    domainAttributes: {
-        firstName: string;
-        lastName: string;
-        guid: string;
-        isArchived: boolean;
-    };
-    domainIdentifier: string;
-    domainType: 'person';
-    frontendUrl: string;
-    icon: 'user';
-    title: string;
-};
 
 /** Custom module — top-level KV-Store container. */
 export type CustomModuleCreate = {
@@ -70,37 +39,4 @@ export type CustomModuleDataValueCreate = {
 
 export type CustomModuleDataValue = CustomModuleDataValueCreate & {
     id: number;
-};
-
-/** Group object — minimal subset used in the template. Generate full types if you need more. */
-export type Group = {
-    id: number;
-    guid: string;
-    name: string;
-    information: {
-        groupTypeId: number;
-        imageUrl: string | null;
-    };
-    memberStatistics?: {
-        active: number;
-        leaders: number;
-        participants: number;
-    };
-    roles?: Array<{
-        id: number;
-        name: string;
-        isLeader: boolean;
-    }>;
-};
-
-export type GroupHierarchy = {
-    children: Array<number>;
-    groupId: number;
-    parents: Array<number>;
-};
-
-export type GroupMember = {
-    person: DomainObjectPerson;
-    personId: number;
-    groupTypeRoleId: number;
 };

@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const client = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('@churchtools/churchtools-client', () => ({ churchtoolsClient: client }));
 
-import { fetchAllPages, mapWithConcurrency, statusOf, withRetryOn429 } from './index';
+import {
+    ChurchToolsApiError,
+    fetchAllPages,
+    mapWithConcurrency,
+    statusOf,
+    withRetryOn429,
+    withTimeout,
+} from './index';
 
 const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status });
 
@@ -124,5 +131,23 @@ describe('statusOf', () => {
         expect(statusOf(httpError(429))).toBe(429);
         expect(statusOf(new Error('network'))).toBeUndefined();
         expect(statusOf(null)).toBeUndefined();
+    });
+});
+
+describe('withTimeout', () => {
+    it('turns a request that never answers into an error with status 0', async () => {
+        vi.useFakeTimers();
+        const hung = withTimeout(new Promise<never>(() => {}), 30_000, '/slow');
+        const settled = hung.catch((e: unknown) => e);
+        await vi.advanceTimersByTimeAsync(30_000);
+        const error = await settled;
+        expect(error).toBeInstanceOf(ChurchToolsApiError);
+        expect(error).toMatchObject({ endpoint: '/slow', status: 0 });
+    });
+
+    it('passes an answer through and clears the timer', async () => {
+        vi.useFakeTimers();
+        await expect(withTimeout(Promise.resolve('ok'), 30_000, '/fast')).resolves.toBe('ok');
+        expect(vi.getTimerCount()).toBe(0);
     });
 });
