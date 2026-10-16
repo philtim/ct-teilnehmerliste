@@ -10,7 +10,6 @@ export type FamilyPerson = {
 
 /** A household among the listed people. Only members of the list are in it. */
 export type Family = {
-    key: string;
     personIds: number[];
 };
 

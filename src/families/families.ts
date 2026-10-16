@@ -99,13 +99,11 @@ export function groupFamilies(
         clusters.set(root, members);
     }
 
-    // Deterministic keys: clusters ordered by their lowest person id, so the
-    // same input always yields the same family numbering.
+    // Unordered and unnumbered: the list orders and numbers the families
+    // (`buildList`), so there is one family id, the one people see.
     return [...clusters.values()]
         .flatMap((members) => splitByHome(members, homes))
-        .map((personIds) => [...personIds].sort((a, b) => a - b))
-        .sort((a, b) => a[0] - b[0])
-        .map((personIds, index) => ({ key: `F${String(index + 1).padStart(3, '0')}`, personIds }));
+        .map((personIds) => ({ personIds }));
 }
 
 /**
