@@ -1,10 +1,8 @@
-export { getModule, getOrCreateModule, resolveModuleId } from './module';
+export { getModule, resolveModuleId } from './module';
 export {
     getCustomDataCategories,
     getCustomDataCategory,
     createCustomDataCategory,
-    updateCustomDataCategory,
-    deleteCustomDataCategory,
 } from './category';
 export {
     getCustomDataValues,

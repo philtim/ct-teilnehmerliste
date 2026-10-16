@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { withCachedLinkValues } from './cached-values';
+import { strFromU8, unzipSync } from 'fflate/browser';
+import writeXlsxFile from 'write-excel-file/universal';
+import { toExcel } from './workbook';
+import { withCachedLinkValues, workbookWithCachedLinkValues } from './cached-values';
 
 describe('withCachedLinkValues', () => {
     it('adds the id as the cached value of a link formula', () => {
@@ -23,5 +26,23 @@ describe('withCachedLinkValues', () => {
     it('does not add a second value', () => {
         const xml = '<f>HYPERLINK("u",5)</f><v>5</v>';
         expect(withCachedLinkValues(xml)).toBe(xml);
+    });
+});
+
+/**
+ * The patch above matches the XML `write-excel-file` writes today. If an
+ * update of the library writes the formula any other way, the regex stops
+ * matching without a sound — and the id column is empty again in Protected
+ * View. This writes a real file with the real library to catch exactly that.
+ */
+describe('workbookWithCachedLinkValues', () => {
+    it("gives the library's own link formulas their value", async () => {
+        const link = toExcel({ kind: 'link', value: 113, href: 'https://x/?q=a#b:%23113/' });
+        const blob = await writeXlsxFile([
+            { sheet: 'Mitglieder', data: [[{ value: 'ID', type: String }], [link]] },
+        ]).toBlob();
+        const patched = workbookWithCachedLinkValues(new Uint8Array(await blob.arrayBuffer()));
+        const sheet = strFromU8(unzipSync(patched)['xl/worksheets/sheet1.xml']);
+        expect(sheet).toMatch(/<f>HYPERLINK\("[^"]*",113\)<\/f><v>113<\/v>/);
     });
 });

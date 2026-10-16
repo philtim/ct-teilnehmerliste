@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from '@/shared/api';
+import { apiGet, apiPost } from '@/shared/api';
 import type { CustomModuleDataCategory, CustomModuleDataCategoryCreate } from '@/shared/types';
 import { resolveModuleId } from './module';
 import { safeParseJSON } from './util';
@@ -39,24 +39,4 @@ export async function createCustomDataCategory(
         `/custommodules/${moduleId}/customdatacategories`,
         payload,
     );
-}
-
-export async function updateCustomDataCategory(
-    dataCategoryId: number,
-    payload: Partial<CustomModuleDataCategory>,
-    moduleId?: number,
-): Promise<void> {
-    moduleId = await resolveModuleId(moduleId);
-    await apiPut<CustomModuleDataCategory>(
-        `/custommodules/${moduleId}/customdatacategories/${dataCategoryId}`,
-        payload,
-    );
-}
-
-export async function deleteCustomDataCategory(
-    dataCategoryId: number,
-    moduleId?: number,
-): Promise<void> {
-    moduleId = await resolveModuleId(moduleId);
-    await apiDelete<void>(`/custommodules/${moduleId}/customdatacategories/${dataCategoryId}`);
 }

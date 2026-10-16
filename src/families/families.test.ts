@@ -26,7 +26,7 @@ function person(
     };
 }
 
-/** Family keys are an implementation detail; compare membership sets. */
+/** Families come unordered; compare membership sets. */
 function membership(participants: FamilyPerson[], relationships: Relationship[]): number[][] {
     return groupFamilies(participants, relationships)
         .map((f) => [...f.personIds].sort((a, b) => a - b))
@@ -248,14 +248,12 @@ describe('groupFamilies — combination and determinism', () => {
         expect(membership(people, rels)).toEqual([[1, 2], [3]]);
     });
 
-    it('assigns stable keys regardless of input order', () => {
+    it('finds the same families regardless of input order', () => {
         const a = person(5, 'Alpha', { street: 'A-Weg 1' });
         const b = person(2, 'Beta', { street: 'B-Weg 2' });
-        const forward = groupFamilies([a, b], []);
-        const reversed = groupFamilies([b, a], []);
-        expect(forward).toEqual(reversed);
-        expect(forward.map((f) => f.key)).toEqual(['F001', 'F002']);
-        expect(forward[0].personIds).toEqual([2]);
+        const c = person(7, 'Alpha', { street: 'A-Weg 1' });
+        expect(membership([a, b, c], [])).toEqual(membership([c, b, a], []));
+        expect(membership([a, b, c], [])).toEqual([[2], [5, 7]]);
     });
 
     it('returns every participant exactly once', () => {

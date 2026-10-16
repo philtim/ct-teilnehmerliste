@@ -1,6 +1,5 @@
 import writeXlsxFile from 'write-excel-file/browser';
-import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate/browser';
-import { withCachedLinkValues } from './cached-values';
+import { workbookWithCachedLinkValues } from './cached-values';
 import type { ExportSheet } from './workbook';
 
 /**
@@ -18,13 +17,8 @@ import type { ExportSheet } from './workbook';
  */
 export async function downloadWorkbook(sheets: ExportSheet[], fileName: string): Promise<void> {
     const blob = await writeXlsxFile(sheets, { fontFamily: 'Arial', fontSize: 11 }).toBlob();
-    const files = unzipSync(new Uint8Array(await blob.arrayBuffer()));
-    for (const [path, content] of Object.entries(files)) {
-        if (/^xl\/worksheets\/sheet\d+\.xml$/.test(path)) {
-            files[path] = strToU8(withCachedLinkValues(strFromU8(content)));
-        }
-    }
-    save(new Blob([zipSync(files)], { type: blob.type }), fileName);
+    const patched = workbookWithCachedLinkValues(new Uint8Array(await blob.arrayBuffer()));
+    save(new Blob([patched], { type: blob.type }), fileName);
 }
 
 function save(blob: Blob, fileName: string) {

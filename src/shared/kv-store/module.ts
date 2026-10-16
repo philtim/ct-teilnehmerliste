@@ -1,15 +1,15 @@
 /**
- * Custom-module lookup and self-bootstrap. The module is the top-level
+ * Custom-module lookup. The module is the top-level
  * container in ChurchTools' KV-Store; categories and values live underneath it.
  */
-import { apiGet, apiPost } from '@/shared/api';
+import { apiGet } from '@/shared/api';
 import { EXTENSION_KEY } from '@/shared/constants';
-import type { CustomModule, CustomModuleCreate } from '@/shared/types';
+import type { CustomModule } from '@/shared/types';
 
 /**
  * Returns the custom module whose `shorty` matches the given key.
- * Throws if no matching module exists — call `getOrCreateModule` if
- * you want self-bootstrap behavior on first run.
+ * Throws if no matching module exists. The deploy creates it (see
+ * `.github/actions/upload-to-churchtools`), so the extension never has to.
  */
 export async function getModule(extensionKey: string = EXTENSION_KEY): Promise<CustomModule> {
     const all = await apiGet<CustomModule[]>('/custommodules');
@@ -18,32 +18,6 @@ export async function getModule(extensionKey: string = EXTENSION_KEY): Promise<C
         throw new Error(`Module for extension key "${extensionKey}" not found.`);
     }
     return module;
-}
-
-export async function getOrCreateModule(
-    extensionKey: string,
-    name: string,
-    description: string,
-): Promise<CustomModule> {
-    try {
-        return await getModule(extensionKey);
-    } catch {
-        return await createModule(extensionKey, name, description);
-    }
-}
-
-async function createModule(
-    extensionKey: string,
-    name: string,
-    description: string,
-): Promise<CustomModule> {
-    const payload: CustomModuleCreate = {
-        name,
-        shorty: extensionKey,
-        description,
-        sortKey: 100,
-    };
-    return await apiPost<CustomModule>('/custommodules', payload);
 }
 
 /** Convenience for category/value helpers that accept an optional moduleId. */
