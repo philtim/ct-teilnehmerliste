@@ -7,9 +7,14 @@ import MemberView from '@/members/MemberView.vue';
 import type { GroupInfo } from '@/members/types';
 
 /** Two steps on one page: choose a group, then shape and download its list. */
-const groupId = ref<number | null>(readGroupParam(window.location.href));
+const fromLink = readGroupParam(window.location.href);
+const groupId = ref<number | null>(typeof fromLink === 'number' ? fromLink : null);
+/** Opened through a link whose group parameter is no id: say so, once. */
+const badLink = ref(fromLink === 'invalid');
 
-watch(groupId, (id) => {
+watch(groupId, replaceAddress, { immediate: fromLink === 'invalid' });
+
+function replaceAddress(id: number | null) {
     try {
         window.history.replaceState(
             window.history.state,
@@ -19,12 +24,13 @@ watch(groupId, (id) => {
     } catch {
         // A sandboxed frame may refuse; the list works without the address.
     }
-});
+}
 
 /** Set once someone has come back from a group, so the picker takes focus then — not on first load. */
 const returned = ref(false);
 
 function choose(group: GroupInfo) {
+    badLink.value = false;
     groupId.value = group.id;
 }
 
@@ -44,6 +50,9 @@ const commit = __APP_COMMIT__;
             <p class="tl__intro">{{ COPY.appIntro }}</p>
         </header>
 
+        <p v-if="badLink && groupId === null" class="tl__notice" role="alert">
+            {{ COPY.invalidGroupLink }}
+        </p>
         <GroupPicker v-if="groupId === null" :focus-on-mount="returned" @select="choose" />
         <MemberView v-else :key="groupId" :group-id="groupId" @change="back" />
 
@@ -107,6 +116,14 @@ const commit = __APP_COMMIT__;
     margin: 0;
     max-width: 70ch;
     color: var(--tl-text-secondary);
+}
+.tl__notice {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--tl-error);
+    background: var(--tl-error-bg);
+    border-radius: var(--tl-radius);
 }
 .tl__footer {
     font-size: 12px;
