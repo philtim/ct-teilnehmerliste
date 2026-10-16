@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1](https://github.com/philtim/ct-teilnehmerliste/compare/v1.0.0...v1.0.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **groups:** find a single-digit id, and say when a query is too short ([b124293](https://github.com/philtim/ct-teilnehmerliste/commit/b124293b8d97e6f59c6572acb4c2b908fb705816))
+* **groups:** refuse a foreign link without a scheme, and fail a failed id lookup ([7cf366d](https://github.com/philtim/ct-teilnehmerliste/commit/7cf366d5927e6da5d9d6a9c7f4645088a18b4245))
+* **ui:** keep focus on the download button while the file is written ([f01bc6b](https://github.com/philtim/ct-teilnehmerliste/commit/f01bc6b6635f03dc8fb3a6d444383fd4a621b8b3))
+* **ui:** say when a link's group parameter is no group id ([85c59ac](https://github.com/philtim/ct-teilnehmerliste/commit/85c59ac303b49f9aeaa1c47b429da032a4a28c0a))
+
 ## 1.0.0 (2026-10-16)
 
 
