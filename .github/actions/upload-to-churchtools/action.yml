@@ -40,8 +40,11 @@ runs:
               trap 'rm -f "$COOKIE_JAR"' EXIT
 
               echo "Authenticating against $CT_BASE_URL..."
+              # The token goes in a header, not the URL: URLs end up in the
+              # access logs of the instance and of every proxy on the way.
               curl -fsS -c "$COOKIE_JAR" \
-                  "$CT_BASE_URL/api/whoami?login_token=$CT_LOGIN_TOKEN" \
+                  -H "Authorization: Login $CT_LOGIN_TOKEN" \
+                  "$CT_BASE_URL/api/whoami" \
                   > /dev/null
 
               echo "Fetching CSRF token..."
