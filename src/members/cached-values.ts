@@ -1,3 +1,5 @@
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate/browser';
+
 /**
  * Give each `HYPERLINK(…, id)` formula its value.
  *
@@ -15,4 +17,15 @@ const LINK_FORMULA = /<f>(HYPERLINK\([^<]*?,(\d+)\))<\/f>(?!<v>)/g;
 
 export function withCachedLinkValues(sheetXml: string): string {
     return sheetXml.replace(LINK_FORMULA, '<f>$1</f><v>$2</v>');
+}
+
+/** The same, applied to every worksheet of a written `.xlsx`. */
+export function workbookWithCachedLinkValues(xlsx: Uint8Array): ReturnType<typeof zipSync> {
+    const files = unzipSync(xlsx);
+    for (const [path, content] of Object.entries(files)) {
+        if (/^xl\/worksheets\/sheet\d+\.xml$/.test(path)) {
+            files[path] = strToU8(withCachedLinkValues(strFromU8(content)));
+        }
+    }
+    return zipSync(files);
 }
